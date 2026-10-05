@@ -4,12 +4,9 @@ A Claude Code mod: while Claude works, **Clawd** walks onto a little stage above
 acts out what is going on — the spinner's `-ing` word (*Sautéing*, *Pondering*, *Herding*…) and
 whatever tool is running right now.
 
-```
-                 · ∘ ○ ?
-         ▐▛███▜▌
-        ▝▜█████▙▖          ← Pondering: wandering about, thought bubbles rising
-          ▘ ▘▝ ▝
-```
+![Clawd thinking, cooking, juggling, conjuring, hatching an egg, dancing, herding sheep and typing while Bash runs](assets/demo.gif)
+
+*Eight scenes at the real frame rate, each cut to a few seconds (a real turn changes scene every 30 s). Every frame is the mod's own output, rendered by `tools/`.*
 
 ## What it does
 
@@ -91,6 +88,16 @@ running tool takes over, and that the timer animates Clawd during a turn and let
 
 Block characters and symbols are drawn one cell wide; a terminal font that draws some of them
 wider may shift a frame.
+
+To regenerate `assets/demo.gif` after changing a scene (Node 22+ and Python with Pillow):
+
+```sh
+node tools/frames.ts > frames.json      # the frames, straight from hooks/scenes.ts
+python tools/render.py frames.json assets/demo.gif
+```
+
+`tools/render.py` uses DejaVu Sans Mono and draws block elements as exact rectangles; edit the
+font path at its top for your system.
 
 ## Notes
 
