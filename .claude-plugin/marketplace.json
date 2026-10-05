@@ -1,0 +1,14 @@
+{
+  "name": "clawd-actor",
+  "description": "Clawd, Claude Code's mascot, acting out what Claude is doing above the prompt",
+  "owner": {
+    "name": "Brian Huang"
+  },
+  "plugins": [
+    {
+      "name": "clawd-actor",
+      "source": "./",
+      "description": "Clawd acts out what Claude is doing, above the prompt"
+    }
+  ]
+}
