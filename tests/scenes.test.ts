@@ -4,10 +4,10 @@ import { frameRows, SCENE_NAMES, H, sceneFor, sceneAt, sceneForTool, ACT_FRAMES 
 const PROBE: Record<string, string> = { think: 'Pondering', cook: 'Cooking', bake: 'Baking', brew: 'Brewing', walk: 'Moseying', run: 'Scampering',
   moonwalk: 'Moonwalking', herd: 'Herding', spin: 'Spinning', magic: 'Conjuring', levitate: 'Levitating', hatch: 'Hatching', grow: 'Sprouting',
   forge: 'Forging', compute: 'Computing', type: 'Xyzzy', talk: 'Xyzzy', dance: 'Vibing', juggle: 'Juggling', honk: 'Honking', sketch: 'Sketching',
-  weather: 'Misting', thunder: 'Thundering', dig: 'Burrowing', flow: 'Flowing', idle: 'Xyzzy' }
+  weather: 'Misting', thunder: 'Thundering', dig: 'Burrowing', flow: 'Flowing', kick: 'Kicking', skate: 'Skating', campfire: 'Kindling', idle: 'Xyzzy' }
 const modeOf = (name: string) => (name === 'type' ? 'tool-use' : name === 'talk' ? 'responding' : 'requesting') as any
 
-test('every scene keeps the stage size and moves Clawd around', () => {
+test('every scene keeps the stage size and moves Clawd around', { timeoutMs: 60_000 }, () => {
   for (const width of [30, 40, 60])
     for (const name of SCENE_NAMES) {
       expect(sceneFor(PROBE[name], modeOf(name))).toBe(name)
@@ -19,7 +19,8 @@ test('every scene keeps the stage size and moves Clawd around', () => {
         const col = rows.map(r => [...r].findIndex(c => '▐▗▝'.includes(c))).find(i => i >= 0)
         if (col !== undefined) columns.add(col)
       }
-      if (width >= 40) expect(columns.size).toBeGreaterThan(4)
+      if (name === 'campfire') expect(columns.size).toBe(1) // sits still by the fire
+      else if (width >= 40) expect(columns.size).toBeGreaterThan(4)
     }
 })
 

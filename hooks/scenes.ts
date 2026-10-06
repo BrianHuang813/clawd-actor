@@ -5,6 +5,7 @@
 export const W = 40 // default stage width; the band passes its own
 export const H = 4
 export const ORANGE = '#D77757'
+const PURPLE = '#A374F5'
 
 export type Cell = { ch: string; color?: string }
 export type Grid = Cell[][]
@@ -31,6 +32,7 @@ type Pose = {
   eyes?: keyof typeof TOP
   arms?: keyof typeof MID
   legs?: keyof typeof LEGS
+  color?: string
 }
 
 // What the wander is doing this frame; scenes read it through clawd() so every pose walks along
@@ -43,9 +45,10 @@ const clawd = (g: Grid, t: number, pose: Pose = {}) => {
   const y = 1 - (pose.lift ?? (stride.hop ? 1 : 0))
   const eyes = pose.eyes ?? (t % 24 === 0 ? 'blink' : 'open') // blinks on its own
   const swing = t % 2 === 0 ? 'left' : 'right'
-  put(g, x, y, TOP[eyes], ORANGE)
-  put(g, x, y + 1, MID[pose.arms ?? (stride.moving ? swing : 'down')], ORANGE)
-  put(g, x, y + 2, LEGS[pose.legs ?? (stride.moving ? walkLegs(t) : 'stand')], ORANGE)
+  const color = pose.color ?? ORANGE
+  put(g, x, y, TOP[eyes], color)
+  put(g, x, y + 1, MID[pose.arms ?? (stride.moving ? swing : 'down')], color)
+  put(g, x, y + 2, LEGS[pose.legs ?? (stride.moving ? walkLegs(t) : 'stand')], color)
 }
 
 /** Back-and-forth position over `span` columns. */
@@ -222,6 +225,46 @@ const scenes: Record<string, Scene> = {
     put(g, x - 2, 2, pick(['· ', ' ∙', '∙·'], t), 'yellow')
   },
 
+  kick: (g, t) => {
+    const p = t % 14 // 0-3 wind up, 3 kick, 4-7 ball flies, 7+ celebrate
+    const kicking = p === 3
+    clawd(g, t, { arms: p >= 7 ? 'up' : kicking ? 'right' : 'down', legs: kicking ? 'b' : undefined, lift: p >= 7 && p % 2 ? 1 : 0 })
+    put(g, 18, 1, '┌─', 'white') // goal
+    put(g, 18, 2, '│#', 'white')
+    put(g, 18, 3, '│#', 'white')
+    const bx = p < 4 ? 11 : Math.min(19, 11 + (p - 3) * 2)
+    put(g, bx, p >= 4 && p <= 6 ? 2 : 3, '●', 'white')
+    if (p >= 7) put(g, 12, 0, 'GOAL!', 'yellow')
+  },
+
+  skate: (g, t) => {
+    // glides across the ice on one blade then the other, arms out for balance, frost trailing behind
+    const span = roam(2)
+    const x = 1 + pingPong(t, span)
+    const right = t % (2 * span) < span
+    put(g, 0, 3, '─'.repeat(stride.width), 'cyan') // the rink
+    const legs = Math.floor(t / 2) % 2 ? 'a' : 'b'
+    clawd(g, t, { x, lift: 1, arms: t % 8 < 4 ? 'up' : right ? 'right' : 'left', legs })
+    // a solid blade right under each foot, so it reads apart from the thin ice line
+    put(g, x + 1, 3, '▀▀▀', 'white')
+    put(g, x + 5, 3, '▀▀▀', 'white')
+    put(g, right ? x - 3 : x + 10, 2, pick(['·  ', ' · ', '  ·'], t), 'white')
+  },
+
+  campfire: (g, t) => {
+    // two Clawds sit still on either side of the fire, gazing in: a slow blink now and then,
+    // a hand held out to the warmth; only the fire and the eyes move
+    const eyes = t % 30 < 2 ? 'blink' : 'open'
+    const warm = t % 20 < 12
+    clawd(g, t, { eyes, arms: warm ? 'right' : 'down' })
+    clawd(g, t, { x: 18, eyes, arms: warm ? 'left' : 'down', color: PURPLE })
+    put(g, 13, 0, pick(['  ·', ' ˙ ', '·  ', '   ', ' · '], Math.floor(t / 2)), 'yellow') // sparks
+    put(g, 13, 1, pick([' ▲ ', '▴▲ ', ' ▲▴', ' ▴ '], t), 'yellow')
+    put(g, 13, 2, pick(['▟█▙', '▟▙▙', '▟█▟', '▙█▙'], t), 'red')
+    put(g, 14, 2, '▒', 'yellow') // the hot core
+    put(g, 12, 3, '═╳═╳═', '#8B5A2B') // logs
+  },
+
   flow: (g, t) => {
     clawd(g, t, { lift: t % 6 < 3 ? 1 : 0 })
     const wave = '∿~'
@@ -232,6 +275,9 @@ const scenes: Record<string, Scene> = {
 // Spinner word → scene, by stem; the first match wins
 const VERBS: [RegExp, string][] = [
   [/moonwalk/, 'moonwalk'],
+  [/campfir|bonfir|kindl|smolder|smoulder|stok|crackl|flicker|glow|fire/, 'campfire'],
+  [/skat|glid|slid|skid|coast/, 'skate'],
+  [/kick|dribbl|scor|punt|volley|soccer|footbal/, 'kick'],
   [/levitat|hyperspac/, 'levitate'],
   [/thunder/, 'thunder'],
   [/honk|boop|hullaballoo|shenanigan|tomfool|razzle/, 'honk'],
@@ -266,8 +312,8 @@ export const sceneFor = (word: string, mode: Mode) => {
   return mode === 'tool-use' || mode === 'tool-input' ? 'type' : mode === 'responding' ? 'talk' : mode === 'thinking' ? 'think' : 'idle'
 }
 
-// Scenes that already travel on their own (or whose ground must stay put) skip the wander
-const SELF_MOVING = new Set(['walk', 'run', 'moonwalk', 'herd', 'dig'])
+// Scenes that already travel on their own (or whose ground must stay put, or that sit still) skip the wander
+const SELF_MOVING = new Set(['walk', 'run', 'moonwalk', 'herd', 'dig', 'skate', 'campfire'])
 const PROPS_WIDTH = 22 // the widest scene's Clawd plus props, from column 0
 const PAUSE = 10 // frames spent standing at each end
 

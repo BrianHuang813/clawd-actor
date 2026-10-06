@@ -10,7 +10,7 @@ whatever tool is running right now.
 
 ## What it does
 
-- **Acts out the spinner word.** 26 scenes, matched by word stem, so *Flambéing* cooks and
+- **Acts out the spinner word.** 29 scenes, matched by word stem, so *Flambéing* cooks and
   *Dilly-dallying* strolls. A word it does not know falls back to what the turn is doing
   (typing for tool use, talking while responding, thinking otherwise).
 - **Acts out the running tool.** `Bash` types, `Read`/`Grep`/`Glob` think, `Edit`/`Write` sketch,
@@ -19,7 +19,8 @@ whatever tool is running right now.
 - **Changes scene every 30 seconds** on long turns, in an order shuffled per turn, never the same
   scene twice in a row.
 - **Wanders the stage.** Clawd strolls left and right with its props, swinging arms and legs,
-  hopping at each turn; the stage follows the terminal width (up to 60 columns).
+  hopping at each turn; the stage follows the terminal width (up to 60 columns). By the
+  campfire it sits still with a purple friend, and only the fire and their eyes move.
 - **Leaves when the turn ends**, and draws nothing while idle (the frame timer only redraws
   during a turn).
 
@@ -36,6 +37,7 @@ whatever tool is running right now.
 | dance / juggle / honk | Vibing, Grooving, Boogieing / Juggling / Honking, Booping |
 | sketch / weather / thunder | Sketching, Doodling / Misting, Billowing / Thundering |
 | dig / flow | Burrowing, Spelunking / Flowing, Undulating |
+| kick / skate / campfire | Kicking, Dribbling / Skating, Gliding / Kindling, Smoldering — no built-in word matches these yet, so they mostly turn up in the rotation |
 
 ## Install
 
@@ -83,7 +85,7 @@ claude plugin test .
 ```
 
 The tests check that every scene keeps the stage size at 30, 40 and 60 columns and moves Clawd
-about, that a turn opens on the spinner word and then rotates through every other scene, that a
+about (the campfire, where it sits still, is checked to stay put), that a turn opens on the spinner word and then rotates through every other scene, that a
 running tool takes over, and that the timer animates Clawd during a turn and lets go after it.
 
 Block characters and symbols are drawn one cell wide; a terminal font that draws some of them
