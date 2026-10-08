@@ -70,7 +70,7 @@ export const register: Register = on => {
         <Box flexDirection="column" height={H}>
           {rows.map(runs => (
             <Text>
-              {runs.map(r => (r.color ? <Text color={r.color}>{r.text}</Text> : r.text))}
+              {runs.map(r => (r.color ? <Text color={r.color} backgroundColor={r.bg}>{r.text}</Text> : r.text))}
             </Text>
           ))}
         </Box>

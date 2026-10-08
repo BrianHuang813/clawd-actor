@@ -41,11 +41,21 @@ QUADS = {
 }
 
 
-def cell(draw, col, row, ch, color):
+def rgb(name):
+    if name in COLORS:
+        return COLORS[name]
+    if name and name.startswith('#') and len(name) == 7:
+        return tuple(int(name[i:i + 2], 16) for i in (1, 3, 5))
+    return COLORS[None]
+
+
+def cell(draw, col, row, ch, color, bg=None):
     ch = SUBST.get(ch, ch)
+    x, y = PAD + col * CW, PAD + row * CH
+    if bg:
+        draw.rectangle([x, y, x + CW - 0.01, y + CH - 0.01], fill=bg)
     if ch == ' ':
         return
-    x, y = PAD + col * CW, PAD + row * CH
     if ch in QUADS:
         hw, hh = CW / 2, CH / 2
         for q in QUADS[ch]:
@@ -70,9 +80,10 @@ def frame(i, f):
     for r, runs in enumerate(f['rows']):
         c = 0
         for run in runs:
-            color = COLORS.get(run.get('color'), COLORS[None])
+            color = rgb(run.get('color'))
+            bg = rgb(run['bg']) if run.get('bg') else None
             for ch in run['text']:
-                cell(d, c, r, ch, color)
+                cell(d, c, r, ch, color, bg)
                 c += 1
     spin = '✻✶'[(i // 3) % 2]
     word = f"{f['word']}…"

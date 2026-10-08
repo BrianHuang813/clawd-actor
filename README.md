@@ -19,14 +19,18 @@ whatever tool is running right now.
 - **Changes scene every 30 seconds** on long turns, in an order shuffled per turn, never the same
   scene twice in a row.
 - **Wanders the stage.** Clawd strolls left and right with its props, swinging arms and legs,
-  hopping at each turn; the stage follows the terminal width (up to 60 columns). By the
+  hopping at each turn and landing with a squash; the stage follows the terminal width (up to
+  60 columns). At the blackboard the board stays put and Clawd steps back to admire its work. By the
   campfire it sits still with a purple friend, and only the fire and their eyes move.
+- **Has a face.** Happy ^ ^ eyes, blinks, glances around, and sways so its far side falls into
+  shadow, after the official Clawd animation; on the move it looks where it is going.
 - **Leaves when the turn ends**, and draws nothing while idle (the frame timer only redraws
   during a turn).
 
 | Scene | Spinner words (some of them) |
 | --- | --- |
 | think | Pondering, Musing, Clauding, Noodling, Ruminating |
+| chalk | Deciphering, Elucidating, Philosophising, Deliberating, Reasoning |
 | cook / bake / brew | Sautéing, Simmering, Whisking / Baking, Kneading / Brewing, Percolating |
 | walk / run / moonwalk | Moseying, Wandering / Scampering, Galloping / Moonwalking |
 | herd | Herding, Wrangling, Mustering |
