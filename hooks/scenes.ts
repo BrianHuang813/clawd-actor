@@ -97,6 +97,16 @@ const clawd = (g: Grid, t: number, pose: Pose = {}) => {
   }
 }
 
+// A little Clawd, 5 columns x 2 rows, standing on the ground (or a row up when it hops)
+const MINI_TOP = { open: '▗▛█▜▖', blink: '▗███▖', left: '▗▜█▜▖', right: '▗▛█▛▖' }
+// second row: the top halves close under the eyes, the bottom halves are the legs (out, or tucked in mid-step)
+const MINI_LEGS = { stand: '▝▛▀▜▘', a: '▝▛▀▜▘', b: '▝▜▀▛▘' }
+const MINI_COLORS = ['#6FA8DC', '#E8C547', '#7BC67E', '#E88AB5'] // blue, yellow, green, pink
+const mini = (g: Grid, x: number, color: string, { lift = 0, eyes = 'open', legs = 'stand' }: { lift?: number; eyes?: keyof typeof MINI_TOP; legs?: keyof typeof MINI_LEGS } = {}) => {
+  put(g, x, 2 - lift, MINI_TOP[eyes], color)
+  put(g, x, 3 - lift, MINI_LEGS[legs], color)
+}
+
 /** Back-and-forth position over `span` columns. */
 const pingPong = (t: number, span: number) => {
   const p = t % (span * 2)
@@ -124,6 +134,8 @@ const scenes: Record<string, Scene> = {
     // a little hop, then it lands with a squash and settles
     const p = t % 24
     clawd(g, t, { lift: p === 10 ? 1 : p === 11 || p === 12 ? -1 : 0, eyes: p >= 9 && p <= 16 ? 'smile' : undefined })
+    // a little one copies the hop a beat late
+    mini(g, 12, MINI_COLORS[0], { lift: p === 12 ? 1 : 0, eyes: p % 12 === 5 ? 'blink' : 'left' })
   },
 
   think: (g, t) => {
@@ -158,8 +170,13 @@ const scenes: Record<string, Scene> = {
   },
 
   walk: (g, t) => {
-    const right = goingRight(t, roam(0))
-    clawd(g, t, { x: 1 + pingPong(t, roam(0)), legs: walkLegs(t), arms: t % 2 ? 'left' : 'right', ...facing(t, right) })
+    // two little ones in a row behind it; at the end they all about-face, so the little ones lead the way back
+    const right = goingRight(t, roam(12))
+    const x = 13 + pingPong(t, roam(12))
+    clawd(g, t, { x, legs: walkLegs(t), arms: t % 2 ? 'left' : 'right', ...facing(t, right) })
+    const eyes = right ? 'right' : 'left'
+    mini(g, x - 6, MINI_COLORS[1], { eyes, legs: t % 2 ? 'a' : 'b' })
+    mini(g, x - 12, MINI_COLORS[2], { eyes, legs: t % 2 ? 'b' : 'a' })
   },
 
   run: (g, t) => {
@@ -201,11 +218,23 @@ const scenes: Record<string, Scene> = {
   },
 
   hatch: (g, t) => {
-    clawd(g, t, { arms: 'right' })
-    const stage = Math.floor(t / 6) % 4
-    put(g, 13, 2, ['▗▄▖', '▗╱▖', '▗╳▖', '✧▖✧'][stage], 'white')
-    put(g, 13, 3, '▝▀▘', 'white')
-    if (stage === 3) put(g, 14, 1, '▴', ORANGE) // a tiny clawd peeks out
+    // the egg wobbles and cracks, bursts, and a baby Clawd stands in the shell, then hops out beside it
+    const p = t % 48
+    const baby = MINI_COLORS[Math.floor(t / 48) % MINI_COLORS.length]
+    const hatched = p >= 26
+    clawd(g, t, { arms: 'right', lift: p === 27 ? 1 : 0, eyes: hatched ? 'smile' : t % 12 === 0 ? 'blink' : 'right', shade: 'left' })
+    if (!hatched) {
+      const wobble = p >= 6 && p < 24 ? [0, 1, 0, -1][t % 4] : 0
+      put(g, 13 + wobble, 2, p < 12 ? '▗▄▖' : p < 18 ? '▗╱▖' : p < 24 ? '▗╳▖' : '✧ ✧', 'white')
+      put(g, 13 + wobble, 3, '▝▀▘', 'white')
+      if (p >= 24) put(g, 12, 1, '✦   ✦', 'yellow')
+      return
+    }
+    put(g, 13, 3, '▝▀▘', 'white') // the bottom half of the shell stays behind
+    const eyes = p % 7 === 0 ? 'blink' : 'left' // looking up at the big one
+    if (p < 34) mini(g, 12, baby, { lift: 1, eyes })
+    else if (p === 34) mini(g, 14, baby, { lift: 2, eyes })
+    else mini(g, 17, baby, { eyes, lift: p === 40 || p === 42 ? 1 : 0 })
   },
 
   grow: (g, t) => {
@@ -246,10 +275,13 @@ const scenes: Record<string, Scene> = {
   dance: (g, t) => {
     clawd(g, t, { lift: t % 2 ? 1 : 0, arms: t % 4 < 2 ? 'left' : 'right', legs: walkLegs(t), eyes: t % 16 < 10 ? 'smile' : 'open', shade: t % 4 < 2 ? 'left' : 'right' })
     put(g, 12, 0, pick(['♪', '♪ ♫', ' ♫ ♪', '♫'], t), 'cyan')
+    // two backup dancers, bouncing on the off-beat
+    mini(g, 12, MINI_COLORS[3], { lift: t % 2 ? 0 : 1, eyes: 'right', legs: t % 4 < 2 ? 'a' : 'b' })
+    mini(g, 18, MINI_COLORS[0], { lift: t % 2 ? 0 : 1, eyes: 'left', legs: t % 4 < 2 ? 'b' : 'a' })
   },
 
   juggle: (g, t) => {
-    clawd(g, t, { arms: t % 2 ? 'left' : 'right' })
+    clawd(g, t, { arms: t % 2 ? 'left' : 'right', lift: 0 }) // no hop: the balls on row 0 would land on its face
     // left hand → over the head → right hand and back; row 1 only beside the body
     const arc: [number, number][] = [[-1, 1], [1, 0], [4, 0], [7, 0], [9, 1], [7, 0], [4, 0], [1, 0]]
     for (let b = 0; b < 3; b++) {
@@ -307,8 +339,9 @@ const scenes: Record<string, Scene> = {
 
   weather: (g, t) => {
     clawd(g, t, { eyes: 'open', arms: 'up' })
-    put(g, 3, 0, '☁☁☁', 'white')
-    put(g, 3 + (t % 3), 1, '╵', 'cyan')
+    // the cloud hangs beside it, so the rain never falls on its face
+    put(g, 12, 0, '☁☁☁', 'white')
+    for (let y = 1; y < H; y++) put(g, 12 + ((t + y) % 3), y, '╵', 'cyan')
   },
 
   thunder: (g, t) => {
@@ -415,9 +448,10 @@ export const sceneFor = (word: string, mode: Mode) => {
   return mode === 'tool-use' || mode === 'tool-input' ? 'type' : mode === 'responding' ? 'talk' : mode === 'thinking' ? 'think' : 'idle'
 }
 
-// Scenes that already travel on their own (or whose ground must stay put, or that sit still) skip the wander
-const SELF_MOVING = new Set(['walk', 'run', 'moonwalk', 'herd', 'dig', 'skate', 'campfire', 'chalk'])
-const PROPS_WIDTH = 22 // the widest scene's Clawd plus props, from column 0
+// Only scenes whose extras belong to Clawd (a bubble, notes, sparks) wander; the rest travel on their own
+// or stand by a pot, a board, an anvil… that must stay put while Clawd works at it
+export const WANDERS = new Set(['idle', 'think', 'talk', 'dance', 'juggle', 'honk', 'levitate', 'magic', 'spin'])
+const PROPS_WIDTH = 23 // the widest scene's Clawd plus props, from column 0 (dance with its backup dancers)
 const PAUSE = 10 // frames spent standing at each end
 
 /** Where the wander puts the frame: stroll right, pause, stroll left, pause; a hop at each turn. */
@@ -440,7 +474,7 @@ const shift = (g: Grid, dx: number): Grid =>
 /** One frame of the stage, as rows of same-colour runs. */
 export const frameRows = (word: string, mode: Mode, t: number, width: number = W, scene?: string) => {
   const name = scene ?? sceneFor(word, mode)
-  const step = SELF_MOVING.has(name) ? { dx: 0, moving: false, hop: false, squash: false, dir: 1 } : wander(t, width)
+  const step = WANDERS.has(name) ? wander(t, width) : { dx: 0, moving: false, hop: false, squash: false, dir: 1 }
   stride.moving = step.moving
   stride.hop = step.hop
   stride.squash = step.squash

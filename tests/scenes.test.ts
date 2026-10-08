@@ -1,5 +1,5 @@
 import { test, expect } from 'claude-code/testing'
-import { frameRows, SCENE_NAMES, H, sceneFor, sceneAt, sceneForTool, ACT_FRAMES } from '../hooks/scenes'
+import { frameRows, SCENE_NAMES, WANDERS, H, sceneFor, sceneAt, sceneForTool, ACT_FRAMES } from '../hooks/scenes'
 
 const PROBE: Record<string, string> = { think: 'Pondering', cook: 'Cooking', bake: 'Baking', brew: 'Brewing', walk: 'Moseying', run: 'Scampering',
   moonwalk: 'Moonwalking', herd: 'Herding', spin: 'Spinning', magic: 'Conjuring', levitate: 'Levitating', hatch: 'Hatching', grow: 'Sprouting',
@@ -7,7 +7,9 @@ const PROBE: Record<string, string> = { think: 'Pondering', cook: 'Cooking', bak
   weather: 'Misting', thunder: 'Thundering', dig: 'Burrowing', flow: 'Flowing', kick: 'Kicking', skate: 'Skating', campfire: 'Kindling', chalk: 'Deciphering', idle: 'Xyzzy' }
 const modeOf = (name: string) => (name === 'type' ? 'tool-use' : name === 'talk' ? 'responding' : 'requesting') as any
 
-test('every scene keeps the stage size and moves Clawd around', { timeoutMs: 60_000 }, () => {
+const TRAVELS = new Set(['walk', 'run', 'moonwalk', 'herd', 'dig', 'skate', 'chalk'])
+
+test('every scene keeps the stage size; Clawd roams only where its props can come along, and no prop hides its face', { timeoutMs: 60_000 }, () => {
   for (const width of [30, 40, 60])
     for (const name of SCENE_NAMES) {
       expect(sceneFor(PROBE[name], modeOf(name))).toBe(name)
@@ -16,10 +18,12 @@ test('every scene keeps the stage size and moves Clawd around', { timeoutMs: 60_
         const rows = frameRows(PROBE[name], modeOf(name), t, width).map(r => r.map(x => x.text).join(''))
         expect(rows.length).toBe(H)
         for (const r of rows) expect([...r].length).toBe(width)
-        const col = rows.map(r => [...r].findIndex(c => '▐▗▝'.includes(c))).find(i => i >= 0)
+        const col = rows.map(r => [...r].indexOf('▐')).find(i => i >= 0) // Clawd's head; the little ones have none
         if (col !== undefined) columns.add(col)
+        // each head row reads ▐ + five face cells + ▌, nothing drawn over it
+        for (const r of rows) for (const m of r.matchAll(/▐/g)) expect(r.slice(m.index, m.index + 7)).toMatch(/^▐[▛▜█^]{5}▌$/)
       }
-      if (name === 'campfire') expect(columns.size).toBe(1) // sits still by the fire
+      if (!WANDERS.has(name) && !TRAVELS.has(name)) expect(columns.size).toBe(1) // stays by its pot, board, anvil…
       else if (width >= 40) expect(columns.size).toBeGreaterThan(4)
     }
 })

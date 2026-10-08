@@ -102,8 +102,9 @@ def frame(i, f):
 
 frames = [frame(i, f) for i, f in enumerate(data['frames'])]
 # One palette for every frame, built from a sample of them, so colours never flicker
-sample = Image.new('RGB', (W, H * 4))
-for k, idx in enumerate([0, len(frames) // 3, 2 * len(frames) // 3, len(frames) - 1]):
+SAMPLES = 8  # enough that every scene's colours make it in
+sample = Image.new('RGB', (W, H * SAMPLES))
+for k, idx in enumerate(range(0, len(frames), -(-len(frames) // SAMPLES))):
     sample.paste(frames[idx], (0, H * k))
 pal = sample.quantize(colors=96, method=Image.Quantize.MEDIANCUT)
 out = [f.quantize(palette=pal, dither=Image.Dither.NONE) for f in frames]
