@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import { FRAME_MS, frameRows, H, sceneAt, type Mode } from './scenes'
+import { ACT_FRAMES, FRAME_MS, frameRows, H, sceneAt, type Mode } from './scenes'
 
 const MAX_STAGE = 60 // widest the wander roams, however wide the terminal
 const frame = atom({ plugin: 'clawd-actor', key: 'frame' } as const, 0)
@@ -12,7 +12,8 @@ let word = 'Thinking'
 let mode: Mode = 'thinking'
 let isTurnRunning = false
 let turnBase = 0 // the frame the turn started on: acts count from it
-let seed = 0 // shuffles this turn's rotation of scenes
+let seed = 0 // shuffles the session's rotation of scenes
+let played = 0 // rotation acts earlier turns got through
 const running: { id: string; tool: string }[] = [] // tools in flight, newest last
 
 export const register: Register = on => {
@@ -20,6 +21,8 @@ export const register: Register = on => {
   // It ticks all session long but only writes, and so redraws, while a turn runs.
   on('session.start', async ($, e, next) => {
     const r = await next(e)
+    seed = Math.floor(await $.clock.now()) % 9973
+    played = 0
     $.clock.every(FRAME_MS, () => (isTurnRunning ? update($, frame, f => (f + 1) % 100_000) : undefined))
     return r
   })
@@ -27,7 +30,6 @@ export const register: Register = on => {
   on('turn.start', async ($, e, next) => {
     isTurnRunning = true
     turnBase = await read($, frame)
-    seed = Math.floor(await $.clock.now()) % 9973
     running.length = 0
     return next(e)
   })
@@ -43,8 +45,9 @@ export const register: Register = on => {
     }
   })
 
-  on('turn.complete', ($, e, next) => {
+  on('turn.complete', async ($, e, next) => {
     isTurnRunning = false
+    played += Math.floor(((await read($, frame)) - turnBase) / ACT_FRAMES) // acts after the opener
     return next(e)
   })
 
@@ -62,7 +65,7 @@ export const register: Register = on => {
 
     const t = await read($, frame)
     const { Box, Text } = $.ui.resolve(e)
-    const scene = sceneAt({ word, mode, tick: t - turnBase, seed, tool: running[running.length - 1]?.tool })
+    const scene = sceneAt({ word, mode, tick: t - turnBase, seed, played, tool: running[running.length - 1]?.tool })
     const rows = frameRows(word, mode, t, Math.min(e.props.bodyColumns, MAX_STAGE), scene)
 
     return (

@@ -28,7 +28,7 @@ test('every scene keeps the stage size; Clawd roams only where its props can com
     }
 })
 
-test('a turn opens on the spinner word, then rotates through every other scene; a running tool wins', () => {
+test('a turn opens on the running tool or the spinner word, then rotates through every other scene whatever runs', () => {
   for (const seed of [0, 17, 4242]) {
     const cue = (act: number, tool?: string) => ({ word: 'Sauteing', mode: 'thinking' as const, tick: act * ACT_FRAMES + 3, seed, tool })
     expect(sceneAt(cue(0))).toBe('cook')
@@ -41,7 +41,9 @@ test('a turn opens on the spinner word, then rotates through every other scene; 
     }
     expect(seen.size).toBe(SCENE_NAMES.length - 4) // all but idle, type, talk and the opening cook
     expect(sceneAt(cue(0, 'Bash'))).toBe('type')
-    expect(sceneAt(cue(9, 'Edit'))).toBe('sketch')
+    expect(sceneAt(cue(9, 'Edit'))).toBe(sceneAt(cue(9))) // past the opener a tool changes nothing
+    // the next turn picks up the rotation where this one stopped
+    expect(sceneAt({ ...cue(1), played: 4 })).toBe(sceneAt(cue(5)))
   }
   expect(sceneForTool('Grep')).toBe('think')
   expect(sceneForTool('Agent')).toBe('herd')

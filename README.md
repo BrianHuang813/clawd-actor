@@ -6,26 +6,27 @@ whatever tool is running right now.
 
 ![Clawd watching a baby Clawd hatch, dancing with two backup dancers, walking with two little ones in a row, and cooking at a pot that stays put](assets/demo.gif)
 
-*Four scenes at the real frame rate, about 15 s in all (a real turn changes scene every 30 s). Every frame is the mod's own output, rendered by `tools/`.*
+*Four scenes at the real frame rate, about 15 s in all (a real turn changes scene every 15 s). Every frame is the mod's own output, rendered by `tools/`.*
 
 ## What it does
 
 - **Acts out the spinner word.** 29 scenes, matched by word stem, so *Flambéing* cooks and
   *Dilly-dallying* strolls. A word it does not know falls back to what the turn is doing
   (typing for tool use, talking while responding, thinking otherwise).
-- **Acts out the running tool.** `Bash` types, `Read`/`Grep`/`Glob` think, `Edit`/`Write` sketch,
-  `Agent` herds sheep, `Web*` checks the weather, `TodoWrite`/`Skill` juggles, MCP tools cast
-  spells, anything else is hammered at the forge. When the tool returns, the show goes on.
-- **Changes scene every 30 seconds** on long turns, in an order shuffled per turn, never the same
-  scene twice in a row.
+- **Acts out the running tool.** In a turn's first 15 seconds a running tool picks the scene
+  instead: `Bash` types, `Read`/`Grep`/`Glob` think, `Edit`/`Write` sketch, `Agent` herds sheep,
+  `Web*` checks the weather, `TodoWrite`/`Skill` juggles, MCP tools cast spells, anything else is
+  hammered at the forge.
+- **Changes scene every 15 seconds** on long turns, whatever tools run, in an order shuffled per
+  session that picks up where the last turn stopped, never the same scene twice in a row.
 - **Wanders the stage.** When all it carries is a thought bubble, notes or sparks, Clawd strolls
   left and right, swinging arms and legs, hopping at each turn and landing with a squash. By a pot,
   an oven, an anvil or a plant it stays put and works; the stage follows the terminal width (up to
   60 columns). At the blackboard the board stays put and Clawd steps back to admire its work. By the
   campfire it sits still with a purple friend, and only the fire and their eyes move.
 - **Brings little friends.** Small Clawds in blue, yellow, green and pink tag along: one copies
-  its idle hop a beat late, two dance backup, two walk in a row behind it (and lead the way back), and
-  one hatches from the egg, stands in its shell and hops out to say hello.
+  its idle hop a beat late, two dance backup, two walk in a row behind it (and lead the way back), two sit
+  by the campfire when the stage is wide enough, and one hatches from the egg, stands in its shell and hops out to say hello.
 - **Has a face.** Happy ^ ^ eyes, blinks, glances around, and sways so its far side falls into
   shadow, after the official Clawd animation; on the move it looks where it is going.
 - **Leaves when the turn ends**, and draws nothing while idle (the frame timer only redraws
@@ -94,8 +95,8 @@ claude plugin test .
 
 The tests check that every scene keeps the stage size at 30, 40 and 60 columns and moves Clawd
 about only in the scenes without set pieces (the rest are checked to stay put), that no prop is ever
-drawn over Clawd's face, that a turn opens on the spinner word and then rotates through every other scene, that a
-running tool takes over, and that the timer animates Clawd during a turn and lets go after it.
+drawn over Clawd's face, that a turn opens on the running tool or the spinner word and then rotates through every
+other scene whatever tools run, picking up where the last turn stopped, and that the timer animates Clawd during a turn and lets go after it.
 
 Block characters and symbols are drawn one cell wide; a terminal font that draws some of them
 wider may shift a frame.

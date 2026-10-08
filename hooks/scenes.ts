@@ -387,17 +387,23 @@ const scenes: Record<string, Scene> = {
 
   campfire: (g, t) => {
     // two Clawds sit still on either side of the fire, gazing in: a slow blink now and then,
-    // a hand held out to the warmth; only the fire and the eyes move
+    // a hand held out to the warmth; only the fire and the eyes move.
+    // With room to spare a little one sits on each outer side, blinking out of step with the big ones.
+    const o = stride.width >= 37 ? 4 : 0
     const warm = t % 20 < 12
     // eyes close happily while the hands are warm
     const eyes = t % 30 < 2 ? 'blink' : warm ? 'smile' : 'open'
-    clawd(g, t, { eyes, arms: warm ? 'right' : 'down' })
-    clawd(g, t, { x: 18, eyes, arms: warm ? 'left' : 'down', color: PURPLE })
-    put(g, 13, 0, pick(['  ·', ' ˙ ', '·  ', '   ', ' · '], Math.floor(t / 2)), 'yellow') // sparks
-    put(g, 13, 1, pick([' ▲ ', '▴▲ ', ' ▲▴', ' ▴ '], t), 'yellow')
-    put(g, 13, 2, pick(['▟█▙', '▟▙▙', '▟█▟', '▙█▙'], t), 'red')
-    put(g, 14, 2, '▒', 'yellow') // the hot core
-    put(g, 12, 3, '═╳═╳═', '#8B5A2B') // logs
+    clawd(g, t, { x: 2 + o, eyes, arms: warm ? 'right' : 'down' })
+    clawd(g, t, { x: 18 + o, eyes, arms: warm ? 'left' : 'down', color: PURPLE })
+    if (o) {
+      mini(g, 0, MINI_COLORS[1], { eyes: t % 30 === 11 || t % 30 === 13 ? 'blink' : 'right' })
+      mini(g, 32, MINI_COLORS[3], { eyes: t % 30 >= 20 && t % 30 < 22 ? 'blink' : 'left' })
+    }
+    put(g, 13 + o, 0, pick(['  ·', ' ˙ ', '·  ', '   ', ' · '], Math.floor(t / 2)), 'yellow') // sparks
+    put(g, 13 + o, 1, pick([' ▲ ', '▴▲ ', ' ▲▴', ' ▴ '], t), 'yellow')
+    put(g, 13 + o, 2, pick(['▟█▙', '▟▙▙', '▟█▟', '▙█▙'], t), 'red')
+    put(g, 14 + o, 2, '▒', 'yellow') // the hot core
+    put(g, 12 + o, 3, '═╳═╳═', '#8B5A2B') // logs
   },
 
   flow: (g, t) => {
@@ -511,23 +517,25 @@ const TOOL_SCENES: [RegExp, string][] = [
 export const sceneForTool = (tool: string) => TOOL_SCENES.find(([re]) => re.test(tool))?.[1] ?? 'forge'
 
 export const FRAME_MS = 140
-export const ACT_MS = 30_000 // each act runs half a minute
+export const ACT_MS = 15_000 // each act runs a quarter of a minute
 export const ACT_FRAMES = Math.round(ACT_MS / FRAME_MS)
 const ROTATION = SCENE_NAMES.filter(n => n !== 'idle' && n !== 'type' && n !== 'talk')
 
-export type Cue = { word: string; mode: Mode; tick: number; seed: number; tool?: string }
+/** `played`: rotation acts earlier turns of the session got through, so the rotation picks up where it left off */
+export type Cue = { word: string; mode: Mode; tick: number; seed: number; tool?: string; played?: number }
 
 /**
- * The scene for this frame of a turn: the running tool's while one runs; otherwise
- * act 0 plays the spinner word, and each later act steps through the rest in an
- * order the turn's seed shuffles (a step coprime with the list's length visits all).
+ * The scene for this frame of a turn. Act 0 opens on the running tool, else the spinner word;
+ * every later act steps through the rotation in an order the session's seed shuffles
+ * (a step coprime with the list's length visits all), whatever tool runs, skipping the opener.
  */
-export const sceneAt = ({ word, mode, tick, seed, tool }: Cue) => {
-  if (tool) return sceneForTool(tool)
-  const first = sceneFor(word, mode)
+export const sceneAt = ({ word, mode, tick, seed, tool, played = 0 }: Cue) => {
+  const first = tool ? sceneForTool(tool) : sceneFor(word, mode)
   const act = Math.floor(Math.max(0, tick) / ACT_FRAMES)
   if (act === 0) return first
-  const others = ROTATION.filter(n => n !== first)
-  const step = [7, 5, 3, 11, 13].find(k => others.length % k !== 0) ?? 1
-  return others[(seed + act * step) % others.length]
+  const n = ROTATION.length
+  const step = [7, 5, 3, 11, 13].find(k => n % k !== 0) ?? 1
+  const i = seed + (played + act - 1) * step
+  // the next one along is neither of its neighbours, as the step is not ±1
+  return ROTATION[i % n] === first ? ROTATION[(i + 1) % n] : ROTATION[i % n]
 }
