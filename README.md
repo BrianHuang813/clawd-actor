@@ -164,8 +164,19 @@ python tools/render.py frames.json assets/demo.gif
 `tools/render.py` uses DejaVu Sans Mono and draws block elements as exact rectangles; edit the
 font path at its top for your system.
 
-Releasing: bump `version` in `.claude-plugin/plugin.json` with every change pushed to `main`.
-`claude plugin update` goes by that version, so a push without a bump never reaches anyone.
+Releasing a version:
+
+1. Bump `version` in `.claude-plugin/plugin.json` in the commit that ships the change.
+   `claude plugin update` and the update notice go by that number alone, so code pushed without a
+   bump never reaches anyone (a change to docs alone needs none).
+2. Push to `main`.
+3. Tag the commit and publish its release notes; tags and releases are the changelog, updates do
+   not read them:
+
+   ```sh
+   git tag -a v0.6.0 -m "clawd-actor 0.6.0" && git push origin v0.6.0
+   gh release create v0.6.0 --title "clawd-actor 0.6.0 — …" --notes "…"
+   ```
 
 ## Notes
 
