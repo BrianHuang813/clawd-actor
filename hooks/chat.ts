@@ -1,7 +1,7 @@
 // /clawd: what the person said, how Clawd answers, and the speech bubble it answers in.
 // Pure functions only, like scenes.ts.
 
-import { FRAME_MS } from './scenes'
+import { FRAME_MS } from './scenes.ts'
 
 /** `/clawd <word>` actions: free and instant, no model call. Each names the scene it plays. */
 export const ACTIONS: Record<string, string> = { pet: 'pet', feed: 'feed', wave: 'wave', hi: 'wave', hello: 'wave', dance: 'disco' }

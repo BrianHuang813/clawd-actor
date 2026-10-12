@@ -29,8 +29,10 @@ cols = data['width']
 ascent, descent = FONT.getmetrics()
 CW = round(FONT.getlength('M'))
 CH = ascent + descent  # block elements span ascent+descent, so rows touch
-ROWS = 4 + 1 + 1 + 1 + 3  # stage, gap, spinner, gap, prompt box
+TOP = max(len(f.get('bubble', [])) for f in data['frames'])  # rows for Clawd's speech bubble, if any frame has one
+ROWS = TOP + 4 + 1 + 1 + 1 + 3  # bubble, stage, gap, spinner, gap, prompt box
 W, H = PAD * 2 + CW * cols, PAD * 2 + CH * ROWS
+WHITE = COLORS['white']
 
 
 # Block elements as exact rectangles (quadrants UL, UR, LL, LR), so neighbouring cells meet with no seam
@@ -77,7 +79,10 @@ def line(draw, col, row, text, color):
 def frame(i, f):
     im = Image.new('RGB', (W, H), BG)
     d = ImageDraw.Draw(im)
-    for r, runs in enumerate(f['rows']):
+    said = f.get('bubble', [])
+    for k, text in enumerate(said):  # sits right on top of the stage, its tail pointing down at Clawd
+        line(d, 0, TOP - len(said) + k, text, WHITE)
+    for r, runs in enumerate(f['rows'], start=TOP):
         c = 0
         for run in runs:
             color = rgb(run.get('color'))
@@ -87,16 +92,20 @@ def frame(i, f):
                 c += 1
     spin = '✻✶'[(i // 3) % 2]
     word = f"{f['word']}…"
-    line(d, 0, 5, spin, ORANGE)
-    line(d, 2, 5, word, ORANGE)
+    line(d, 0, TOP + 5, spin, ORANGE)
+    line(d, 2, TOP + 5, word, ORANGE)
     tail = f" · {f['note']}" if f['note'] else ' (esc to interrupt)'
-    line(d, 2 + len(word), 5, tail, DIM)
+    line(d, 2 + len(word), TOP + 5, tail, DIM)
     box = cols
-    line(d, 0, 7, '╭' + '─' * (box - 2) + '╮', BORDER)
-    line(d, 0, 8, '│', BORDER)
-    line(d, 2, 8, '>', DIM)
-    line(d, box - 1, 8, '│', BORDER)
-    line(d, 0, 9, '╰' + '─' * (box - 2) + '╯', BORDER)
+    line(d, 0, TOP + 7, '╭' + '─' * (box - 2) + '╮', BORDER)
+    line(d, 0, TOP + 8, '│', BORDER)
+    line(d, 2, TOP + 8, '>', DIM)
+    typed = f.get('prompt', '')
+    line(d, 4, TOP + 8, typed, WHITE)
+    if typed:
+        cell(d, 4 + len(typed), TOP + 8, '▌', DIM)  # the cursor
+    line(d, box - 1, TOP + 8, '│', BORDER)
+    line(d, 0, TOP + 9, '╰' + '─' * (box - 2) + '╯', BORDER)
     return im
 
 
