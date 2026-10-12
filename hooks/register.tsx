@@ -1,6 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { Engine, Register } from 'claude-code'
 
+import { bubble, clean, holdFrames, parseClawd, persona, HELP } from './chat'
 import { ACT_FRAMES, FRAME_MS, frameRows, H, hold, type Mode, type Shown } from './scenes'
 
 const MAX_STAGE = 60 // widest the wander roams, however wide the terminal
@@ -15,8 +16,12 @@ let turnBase = 0 // the frame the turn started on: acts count from it
 let seed = 0 // shuffles the session's rotation of scenes
 let played = 0 // rotation acts earlier turns got through
 let shown: Shown | undefined // the scene on stage, held for its act
+// What /clawd set going: a scene played over the show, and what Clawd says, for `left` more frames
+let reaction: { scene: string; say?: string; left: number } | undefined
 const running: { id: string; tool: string }[] = [] // tools in flight, newest last
 
+const REACT_FRAMES = Math.round(6000 / FRAME_MS) // how long a /clawd action plays
+const WAIT_FRAMES = Math.round(15_000 / FRAME_MS) // the most Clawd ponders before a reply
 const UPDATE_CHECK_MS = 2000 // after start-up settles, so the toast is seen
 const LATEST = 'https://raw.githubusercontent.com/BrianHuang813/clawd-actor/main/.claude-plugin/plugin.json'
 
@@ -40,6 +45,31 @@ const checkForUpdate = async ($: Engine) => {
   }
 }
 
+/** Plays `scene` over the show for `frames` frames, Clawd saying `say`; redraws at once, even between turns. */
+const react = async ($: Engine, scene: string, say?: string, frames = REACT_FRAMES) => {
+  reaction = { scene, say, left: frames }
+  await update($, frame, f => (f + 1) % 100_000)
+}
+
+/** What Claude is up to, for Clawd's system prompt. */
+const status = () => {
+  if (!isTurnRunning) return 'Claude is idle, waiting for the user.'
+  const tool = running[running.length - 1]?.tool
+  return `Claude is working (the spinner says "${word}"${tool ? `, the ${tool} tool is running` : ''}); you are acting out the "${shown?.scene ?? 'think'}" scene.`
+}
+
+/** Asks Haiku for Clawd's answer and puts it in the bubble; Claude's own conversation never sees either side. */
+const reply = async ($: Engine, text: string, now: string) => {
+  let say = 'Hmm, my words got lost on the way. Try again?'
+  try {
+    const r = await $.model.complete({ model: 'haiku', system: persona(now), prompt: text, maxTokens: 150, timeoutMs: 15_000 })
+    if (r.isAnswered && clean(r.text)) say = clean(r.text)
+  } catch {
+    // the engine would not send it (a blocked model, say): Clawd still answers, with the line above
+  }
+  await react($, 'say', say, holdFrames(say))
+}
+
 export const register: Register = on => {
   // A timer must start where work may outlive the dispatch: session.start (fires again on reload).
   // It ticks all session long but only writes, and so redraws, while a turn runs.
@@ -48,8 +78,28 @@ export const register: Register = on => {
     seed = Math.floor(await $.clock.now()) % 9973
     played = 0
     $.clock.after(UPDATE_CHECK_MS, () => checkForUpdate($)) // on a timer: the session never waits on the network
-    $.clock.every(FRAME_MS, () => (isTurnRunning ? update($, frame, f => (f + 1) % 100_000) : undefined))
+    $.clock.every(FRAME_MS, () => {
+      const isReacting = reaction !== undefined
+      if (reaction && --reaction.left <= 0) reaction = undefined
+      // a reaction redraws between turns too, one last time as it ends so the stage goes
+      return isTurnRunning || isReacting ? update($, frame, f => (f + 1) % 100_000) : undefined
+    })
+    // last, so the timers run whatever happens here; immediate: /clawd runs mid-turn instead of waiting
+    await $.command.register({ name: 'clawd', description: 'Pet, feed or wave at Clawd, or say something to it', argumentHint: '[pet|feed|wave|dance|message]', immediate: true })
     return r
+  })
+
+  // Answers in Clawd's bubble only: no transcript line, so nothing of it reaches Claude
+  on('command.run', { command: 'clawd' }, async ($, e) => {
+    const ask = parseClawd(e.args)
+    if ('help' in ask) await react($, 'wave', HELP)
+    else if ('action' in ask) await react($, ask.action)
+    else {
+      await react($, 'ponder', '· · ·', WAIT_FRAMES)
+      const now = status()
+      $.clock.after(1, () => reply($, ask.chat, now)) // on a timer: the prompt never waits on the model
+    }
+    return {}
   })
 
   on('turn.start', async ($, e, next) => {
@@ -86,15 +136,22 @@ export const register: Register = on => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const below = await next(e) // keep whatever other band mods draw here
     // isWorking is the engine's own word on whether a turn runs
-    if (e.props.hasSurvey || !e.props.isWorking) return below
+    if (e.props.hasSurvey || (!e.props.isWorking && !reaction)) return below
 
     const t = await read($, frame)
     const { Box, Text } = $.ui.resolve(e)
     shown = hold(shown, turnBase, { word, mode, tick: t - turnBase, seed, played, tool: running[running.length - 1]?.tool })
-    const rows = frameRows(word, mode, t, Math.min(e.props.bodyColumns, MAX_STAGE), shown.scene)
+    const width = Math.min(e.props.bodyColumns, MAX_STAGE)
+    const rows = frameRows(word, mode, t, width, reaction?.scene ?? shown.scene)
+    // the bubble needs its two border rows besides the text: left out when the band has no room for one line
+    const room = Math.min(3, e.props.maxRows - H - 2)
+    const said = reaction?.say && room > 0 ? bubble(reaction.say, width, room) : []
 
     return (
       <Box flexDirection="column">
+        {said.map(line => (
+          <Text color="white">{line}</Text>
+        ))}
         <Box flexDirection="column" height={H}>
           {rows.map(runs => (
             <Text>

@@ -429,6 +429,42 @@ const scenes: Record<string, Scene> = {
   },
 }
 
+// Reactions to /clawd: played over the show for a few seconds, never part of the rotation
+const reactions: Record<string, Scene> = {
+  pet: (g, t) => {
+    // purrs under the hand: happy eyes, a little bounce, hearts floating up
+    clawd(g, t, { eyes: 'smile', arms: t % 6 < 3 ? 'up' : 'down', lift: t % 8 === 0 ? 1 : 0, shade: 'none' })
+    for (let k = 0; k < 2; k++) {
+      const p = (t + k * 3) % 6
+      put(g, 11 + k * 3 + (p % 2), 2 - Math.floor(p / 2), '♥', pick(['red', 'magenta'], k))
+    }
+  },
+
+  feed: (g, t) => {
+    // a cookie rolls in, gets munched, crumbs fall
+    const p = t % 16
+    const eating = p >= 6
+    clawd(g, t, { eyes: eating ? 'smile' : 'right', arms: eating ? (t % 2 ? 'left' : 'right') : 'down', shade: eating ? 'none' : 'left' })
+    if (!eating) put(g, 21 - p * 2, 2, '●', 'yellow')
+    else {
+      put(g, 11, 2 + (p % 2), pick(['·', '∙'], t), 'yellow') // crumbs
+      if (p < 12) put(g, 12, 1, pick(['nom', 'nom nom'], Math.floor(t / 2)), 'white')
+    }
+  },
+
+  // chatting: it stands still under its speech bubble, thinking, then talking with its hands
+  ponder: (g, t) => scenes.think(g, t),
+  say: (g, t) => clawd(g, t, { arms: pick(['down', 'right', 'down', 'left'] as const, Math.floor(t / 3)), eyes: t % 18 === 0 ? 'blink' : 'open', shade: 'none' }),
+
+  wave: (g, t) => {
+    // waves hello with both arms
+    clawd(g, t, { eyes: t % 12 < 9 ? 'smile' : 'open', arms: t % 4 < 2 ? 'up' : 'down', shade: 'none' })
+    put(g, 11, 1, pick([')', ' )', '  )'], t), 'white')
+    put(g, 12, 0, 'hi!', 'yellow')
+  },
+}
+export const REACTION_NAMES = Object.keys(reactions)
+
 // Spinner word → scene, by stem; the first match wins
 const VERBS: [RegExp, string][] = [
   [/moonwalk/, 'moonwalk'],
@@ -504,7 +540,7 @@ export const frameRows = (word: string, mode: Mode, t: number, width: number = W
   stride.dir = step.dir
   stride.width = width
   const g0 = blank(width)
-  ;(scenes[name] ?? scenes.idle)(g0, t)
+  ;(scenes[name] ?? reactions[name] ?? scenes.idle)(g0, t)
   const g = shift(g0, step.dx)
   return g.map(row => {
     const runs: { text: string; color?: string; bg?: string }[] = []

@@ -1,5 +1,5 @@
 import { test, expect } from 'claude-code/testing'
-import { frameRows, SCENE_NAMES, WANDERS, H, sceneFor, sceneAt, sceneForTool, hold, ACT_FRAMES } from '../hooks/scenes'
+import { frameRows, SCENE_NAMES, REACTION_NAMES, WANDERS, H, sceneFor, sceneAt, sceneForTool, hold, ACT_FRAMES } from '../hooks/scenes'
 
 const PROBE: Record<string, string> = { think: 'Pondering', cook: 'Cooking', bake: 'Baking', brew: 'Brewing', walk: 'Moseying', run: 'Scampering',
   moonwalk: 'Moonwalking', herd: 'Herding', spin: 'Spinning', magic: 'Conjuring', levitate: 'Levitating', hatch: 'Hatching', grow: 'Sprouting',
@@ -25,6 +25,19 @@ test('every scene keeps the stage size; Clawd roams only where its props can com
       }
       if (!WANDERS.has(name) && !TRAVELS.has(name)) expect(columns.size).toBe(1) // stays by its pot, board, anvil…
       else if (width >= 40) expect(columns.size).toBeGreaterThan(4)
+    }
+  // the /clawd reactions: same stage, same face, and Clawd stays where it is
+  for (const width of [30, 60])
+    for (const name of REACTION_NAMES) {
+      const columns = new Set<number>()
+      for (let t = 0; t < 48; t++) {
+        const rows = frameRows('Xyzzy', 'requesting', t, width, name).map(r => r.map(x => x.text).join(''))
+        expect(rows.length).toBe(H)
+        for (const r of rows) expect([...r].length).toBe(width)
+        for (const r of rows) for (const m of r.matchAll(/▐/g)) expect(r.slice(m.index, m.index + 7)).toMatch(/^▐[▛▜█^]{5}▌$/)
+        columns.add(rows.map(r => [...r].indexOf('▐')).find(i => i >= 0)!)
+      }
+      expect(columns.size).toBe(1)
     }
 })
 

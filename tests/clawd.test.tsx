@@ -6,6 +6,7 @@ const shown = async (ui: any) => (await ui.findAll({ type: 'Text' })).map((t: an
 test('the session timer animates Clawd during a turn; it leaves when the turn ends', async ($, on) => {
   const clock = mock.clock(on)
   on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('command.register', ($, e) => ({ value: { command: e.name } }))
   on('turn.start', () => ({ turnId: 't1' }))
   on('turn.complete', () => ({ text: '' }))
   on('ui.render', { component: 'AbovePrompt' }, ($, e) => {

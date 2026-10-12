@@ -32,8 +32,10 @@ then puts on a show of 31 scenes, a new one every 15 seconds, with little Clawds
   one hatches from the egg, stands in its shell and hops out to say hello.
 - **Has a face.** Happy ^ ^ eyes, blinks, glances around, and sways so its far side falls into
   shadow, after the official Clawd animation; on the move it looks where it is going.
+- **Talks back.** `/clawd` pets, feeds or waves at Clawd, or chats with it, even mid-turn (see
+  below).
 - **Leaves when the turn ends**, and draws nothing while idle (the frame timer only redraws
-  during a turn).
+  during a turn), unless you call it out with `/clawd`.
 
 | Scene | Spinner words (some of them) |
 | --- | --- |
@@ -51,6 +53,25 @@ then puts on a show of 31 scenes, a new one every 15 seconds, with little Clawds
 | sketch / weather / thunder | Sketching, Doodling / Misting, Billowing / Thundering |
 | dig / flow | Burrowing, Spelunking / Flowing, Undulating |
 | kick / skate / campfire | Kicking, Dribbling / Skating, Gliding / Kindling, Smoldering — no built-in word matches these yet, so they mostly turn up in the rotation |
+
+## Talk to Clawd
+
+`/clawd` runs at once, even while Claude is working, and never interrupts the turn:
+
+| You type | Clawd |
+| --- | --- |
+| `/clawd pet` | purrs, with hearts floating up |
+| `/clawd feed` | catches a cookie and munches it |
+| `/clawd wave` (or `hi`, `hello`) | waves back |
+| `/clawd dance` | dances under the disco ball |
+| `/clawd <anything else>` | answers in a speech bubble |
+
+Actions are free and instant. Anything else is a chat: Clawd ponders for a moment, then answers in
+a sentence or two, in your language, knowing what Claude is up to right now. The answer comes from
+Haiku (one small `haiku` call per message, on your usage) and shows only in Clawd's bubble: it is
+not written to the transcript, so Claude's own conversation never sees it. Each message stands
+alone; Clawd does not remember earlier ones. Between turns Clawd steps out for the reaction and
+leaves again after it.
 
 ## Install
 
@@ -100,6 +121,10 @@ without calling `next(e)` hides everything beneath it — if Clawd never shows u
 - `ui.render` on `Spinner` only *observes*: it remembers the word and mode and lets the engine draw
   the spinner as usual.
 - `tool.call` notes the tool in flight and forgets it when the call returns.
+- `/clawd` is registered `immediate`, so it runs mid-turn. Its `command.run` hook returns no text
+  (nothing for the transcript or the model); it sets a reaction the band plays over the show. A
+  chat calls `$.model.complete` from a one-shot timer, so the prompt never waits on the model.
+  `hooks/chat.ts` holds the parsing, Clawd's persona and the speech bubble.
 - One timer, started in `session.start`, advances a frame counter in `$.state` every 140 ms while a
   turn runs; the band reads it, which subscribes it to redraws. A timer started inside a
   `turn.start` hook does not outlive that dispatch, which is why it lives in `session.start`.
@@ -122,8 +147,9 @@ The tests check that every scene keeps the stage size at 30, 40 and 60 columns a
 about only in the scenes without set pieces (the rest are checked to stay put), that no prop is ever
 drawn over Clawd's face, that a turn opens on the running tool or the spinner word and then rotates through every
 other scene whatever tools run, picking up where the last turn stopped, that a scene holds for its whole act,
-that the timer animates Clawd during a turn and lets go after it, and that the update notice shows only
-when `main` carries a newer version.
+that the timer animates Clawd during a turn and lets go after it, that `/clawd` plays its reactions
+between turns and shows Haiku's answer (or a fallback) in a bubble that fits any script, and that
+the update notice shows only when `main` carries a newer version.
 
 Block characters and symbols are drawn one cell wide; a terminal font that draws some of them
 wider may shift a frame.
