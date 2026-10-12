@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
-import type { Register } from 'claude-code'
+import type { Engine, Register } from 'claude-code'
 
-import { ACT_FRAMES, FRAME_MS, frameRows, H, sceneAt, type Mode } from './scenes'
+import { ACT_FRAMES, FRAME_MS, frameRows, H, hold, type Mode, type Shown } from './scenes'
 
 const MAX_STAGE = 60 // widest the wander roams, however wide the terminal
 const frame = atom({ plugin: 'clawd-actor', key: 'frame' } as const, 0)
@@ -14,7 +14,31 @@ let isTurnRunning = false
 let turnBase = 0 // the frame the turn started on: acts count from it
 let seed = 0 // shuffles the session's rotation of scenes
 let played = 0 // rotation acts earlier turns got through
+let shown: Shown | undefined // the scene on stage, held for its act
 const running: { id: string; tool: string }[] = [] // tools in flight, newest last
+
+const UPDATE_CHECK_MS = 2000 // after start-up settles, so the toast is seen
+const LATEST = 'https://raw.githubusercontent.com/BrianHuang813/clawd-actor/main/.claude-plugin/plugin.json'
+
+/** Whether dotted version `a` is past `b`, part by part (1.10.0 is past 1.9.2). */
+export const isNewer = (a: string, b: string) => {
+  const [x, y] = [a, b].map(v => v.split('.').map(Number))
+  const i = x.findIndex((n, k) => n !== (y[k] ?? 0))
+  return i >= 0 && x[i] > (y[i] ?? 0)
+}
+
+/** Once a session: if main carries a newer version than this install, say so and how to update. */
+const checkForUpdate = async ($: Engine) => {
+  try {
+    const mine = JSON.parse(String(await $.fs.read(`${$.plugin.root}/.claude-plugin/plugin.json`))).version
+    const res = await $.http.fetch(LATEST)
+    const latest = res.ok ? JSON.parse(res.text).version : undefined
+    if (latest && isNewer(latest, mine))
+      $.ui.toast(`clawd-actor ${latest} is out (you have ${mine}): run /clawd-actor:update`, { timeoutMs: 15_000 })
+  } catch {
+    // offline, or the fetch is refused by policy: the check is a courtesy, the next session tries again
+  }
+}
 
 export const register: Register = on => {
   // A timer must start where work may outlive the dispatch: session.start (fires again on reload).
@@ -23,6 +47,7 @@ export const register: Register = on => {
     const r = await next(e)
     seed = Math.floor(await $.clock.now()) % 9973
     played = 0
+    $.clock.after(UPDATE_CHECK_MS, () => checkForUpdate($)) // on a timer: the session never waits on the network
     $.clock.every(FRAME_MS, () => (isTurnRunning ? update($, frame, f => (f + 1) % 100_000) : undefined))
     return r
   })
@@ -65,8 +90,8 @@ export const register: Register = on => {
 
     const t = await read($, frame)
     const { Box, Text } = $.ui.resolve(e)
-    const scene = sceneAt({ word, mode, tick: t - turnBase, seed, played, tool: running[running.length - 1]?.tool })
-    const rows = frameRows(word, mode, t, Math.min(e.props.bodyColumns, MAX_STAGE), scene)
+    shown = hold(shown, turnBase, { word, mode, tick: t - turnBase, seed, played, tool: running[running.length - 1]?.tool })
+    const rows = frameRows(word, mode, t, Math.min(e.props.bodyColumns, MAX_STAGE), shown.scene)
 
     return (
       <Box flexDirection="column">

@@ -280,6 +280,22 @@ const scenes: Record<string, Scene> = {
     mini(g, 18, MINI_COLORS[0], { lift: t % 2 ? 0 : 1, eyes: 'left', legs: t % 4 < 2 ? 'b' : 'a' })
   },
 
+  disco: (g, t) => {
+    // under a spinning mirror ball: the floor flashes, beams glint around the ball, Clawd and a little one dance
+    const lights = ['magenta', 'cyan', 'yellow', '#7BC67E']
+    for (let i = 0; i < 13; i++) put(g, i * 2, 3, '▁▁', pick(lights, i + Math.floor(t / 2)))
+    const beat = t % 4 < 2
+    clawd(g, t, { lift: beat ? 1 : 0, arms: pick(['up', 'right', 'up', 'left'] as const, Math.floor(t / 2)), eyes: t % 16 < 12 ? 'smile' : 'open', shade: beat ? 'left' : 'right' })
+    mini(g, 20, MINI_COLORS[3], { lift: beat ? 0 : 1, eyes: 'left', legs: beat ? 'a' : 'b' })
+    put(g, 15, 0, pick(['◐', '◓', '◑', '◒'], t), 'white') // the ball
+    // glints, all right of column 11 so none lands on Clawd
+    const glints: [number, number][] = [[13, 0], [17, 0], [12, 1], [18, 1], [14, 2], [16, 1], [12, 2], [18, 2]]
+    for (let k = 0; k < 3; k++) {
+      const [x, y] = glints[(t + k * 3) % glints.length]
+      put(g, x, y, pick(['✦', '✧', '·'], t + k), pick(lights, t + k))
+    }
+  },
+
   juggle: (g, t) => {
     clawd(g, t, { arms: t % 2 ? 'left' : 'right', lift: 0 }) // no hop: the balls on row 0 would land on its face
     // left hand → over the head → right hand and back; row 1 only beside the body
@@ -435,7 +451,8 @@ const VERBS: [RegExp, string][] = [
   [/conjur|manifest|transmut|transfigur|enchant|prestidig|metamorph|quantum|warp|sublimat|ioniz|crystalli|channel|alchem/, 'magic'],
   [/hatch|incubat|nest|roost/, 'hatch'],
   [/germinat|sprout|pollinat|photosynth|cultivat|propagat|unfurl|symbiot|bloom|nucleat/, 'grow'],
-  [/vib|groov|boogi|jitterbug|shimm|sock|bebop|frolic|choreograph|harmoni|orchestrat|compos|improvis|jam/, 'dance'],
+  [/disco|funk|boogi|groov|fiesta|shindig|soiree/, 'disco'],
+  [/vib|jitterbug|shimm|sock|bebop|frolic|choreograph|harmoni|orchestrat|compos|improvis|jam/, 'dance'],
   [/calculat|comput|crunch|process|infer|synthesi|analy|hash|gitif|quantif/, 'compute'],
   [/forg|craft|build|construct|tinker|form|creat|generat|actualiz|accomplish|action|effect|embellish|bootstrap|doing|work/, 'forge'],
   [/mist|nebuli|evaporat|billow|gust|precipitat|cloud/, 'weather'],
@@ -521,21 +538,36 @@ export const ACT_MS = 15_000 // each act runs a quarter of a minute
 export const ACT_FRAMES = Math.round(ACT_MS / FRAME_MS)
 const ROTATION = SCENE_NAMES.filter(n => n !== 'idle' && n !== 'type' && n !== 'talk')
 
-/** `played`: rotation acts earlier turns of the session got through, so the rotation picks up where it left off */
-export type Cue = { word: string; mode: Mode; tick: number; seed: number; tool?: string; played?: number }
+/**
+ * `played`: rotation acts earlier turns of the session got through, so the rotation picks up where it left off;
+ * `prev`: the scene the act before this one showed
+ */
+export type Cue = { word: string; mode: Mode; tick: number; seed: number; tool?: string; played?: number; prev?: string }
 
 /**
  * The scene for this frame of a turn. Act 0 opens on the running tool, else the spinner word;
  * every later act steps through the rotation in an order the session's seed shuffles
  * (a step coprime with the list's length visits all), whatever tool runs, skipping the opener.
  */
-export const sceneAt = ({ word, mode, tick, seed, tool, played = 0 }: Cue) => {
-  const first = tool ? sceneForTool(tool) : sceneFor(word, mode)
+export const sceneAt = ({ word, mode, tick, seed, tool, played = 0, prev }: Cue) => {
   const act = Math.floor(Math.max(0, tick) / ACT_FRAMES)
-  if (act === 0) return first
+  if (act === 0) return tool ? sceneForTool(tool) : sceneFor(word, mode)
   const n = ROTATION.length
   const step = [7, 5, 3, 11, 13].find(k => n % k !== 0) ?? 1
   const i = seed + (played + act - 1) * step
   // the next one along is neither of its neighbours, as the step is not ±1
-  return ROTATION[i % n] === first ? ROTATION[(i + 1) % n] : ROTATION[i % n]
+  return ROTATION[i % n] === prev ? ROTATION[(i + 1) % n] : ROTATION[i % n]
+}
+
+export type Shown = { turn: number; act: number; scene: string }
+
+/**
+ * The scene on stage: picked at an act's first frame and held for the whole act, whatever the
+ * tool, the spinner word or the mode do meanwhile. `turn` tells the turns apart (its first frame).
+ */
+export const hold = (shown: Shown | undefined, turn: number, cue: Cue): Shown => {
+  const act = Math.floor(Math.max(0, cue.tick) / ACT_FRAMES)
+  const same = shown?.turn === turn
+  if (same && shown.act === act) return shown
+  return { turn, act, scene: sceneAt({ ...cue, prev: same ? shown.scene : undefined }) }
 }

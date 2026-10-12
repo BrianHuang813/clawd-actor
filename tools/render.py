@@ -106,7 +106,7 @@ SAMPLES = 8  # enough that every scene's colours make it in
 sample = Image.new('RGB', (W, H * SAMPLES))
 for k, idx in enumerate(range(0, len(frames), -(-len(frames) // SAMPLES))):
     sample.paste(frames[idx], (0, H * k))
-pal = sample.quantize(colors=96, method=Image.Quantize.MEDIANCUT)
+pal = sample.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
 out = [f.quantize(palette=pal, dither=Image.Dither.NONE) for f in frames]
 out[0].save(sys.argv[2], save_all=True, append_images=out[1:], duration=FRAME_MS, loop=0, optimize=True, disposal=1)
 print(f'{len(out)} frames, {W}x{H}px ->', sys.argv[2])
