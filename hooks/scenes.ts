@@ -115,7 +115,7 @@ const pingPong = (t: number, span: number) => {
   const p = t % (span * 2)
   return p < span ? p : span * 2 - p
 }
-const walkLegs = (t: number) => (t % 2 === 0 ? 'a' : 'b') as Pose['legs']
+const walkLegs = (t: number): keyof typeof LEGS => (t % 2 === 0 ? 'a' : 'b')
 /** Which way a pingPong(t, span) is heading. */
 const goingRight = (t: number, span: number) => t % (span * 2) < span
 /** Looks and turns toward `right`, with a blink now and then. */

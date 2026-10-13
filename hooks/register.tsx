@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { Engine, Register } from 'claude-code'
+import type { EngineInterface as Engine, Register } from 'claude-code'
 
 import { bubble, clean, holdFrames, parseClawd, persona, HELP } from './chat'
 import { ACT_FRAMES, FRAME_MS, frameRows, H, hold, type Mode, type Shown } from './scenes'

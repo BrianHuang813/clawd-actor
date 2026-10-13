@@ -13,9 +13,12 @@ allowed-tools:
 Claude Code's own plugin manager does the update; nothing is downloaded by hand.
 
 1. Note the installed version and scope: `claude plugin list`, the `clawd-actor@clawd-actor` entry.
-   If there is none, clawd-actor was not installed from its marketplace (for example it is loaded
-   with `--plugin-dir` or from a mods folder): say so, and that `git pull` in that folder updates
-   it; stop here.
+   If there is none, clawd-actor was not installed from its marketplace; say so and stop here:
+   - `clawd-actor@skills-dir` is a copy in a `skills` folder (claude-code-templates installs it
+     there) and does not update itself: to get the latest, delete that folder and install from the
+     marketplace with `/plugin marketplace add BrianHuang813/clawd-actor` then
+     `/plugin install clawd-actor@clawd-actor`.
+   - Loaded with `--plugin-dir` from a clone: `git pull` in that folder updates it.
 2. Refresh the catalog: `claude plugin marketplace update clawd-actor`.
 3. Update: `claude plugin update clawd-actor@clawd-actor`, adding `--scope <scope>` when step 1
    showed a scope other than `user`.
