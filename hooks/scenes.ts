@@ -12,19 +12,21 @@ const PURPLE = '#A374F5'
 export type Cell = { ch: string; color?: string; bg?: string }
 export type Grid = Cell[][]
 
-const blank = (width: number): Grid => Array.from({ length: H }, () => Array.from({ length: width }, () => ({ ch: ' ' })))
+// One empty cell shared by the whole grid: it is only ever replaced, never changed
+const SPACE: Cell = { ch: ' ' }
+const blank = (width: number): Grid => Array.from({ length: H }, () => Array(width).fill(SPACE))
 
-/** Paints `s` at (x, y); spaces are transparent so props can overlap Clawd's gaps. */
+/** Paints `s` at (x, y), moved along by the wander; spaces are transparent so props can overlap Clawd's gaps. */
 const put = (g: Grid, x: number, y: number, s: string, color?: string, bg?: string) => {
   if (y < 0 || y >= H) return
   ;[...s].forEach((ch, i) => {
-    const cx = x + i
+    const cx = x + stride.dx + i
     if (ch !== ' ' && cx >= 0 && cx < g[y].length) g[y][cx] = bg ? { ch, color, bg } : { ch, color }
   })
 }
 /** Recolours what is already drawn at (x, y), keeping the glyph. */
 const tint = (g: Grid, x: number, y: number, color: string) => {
-  const c = g[y]?.[x]
+  const c = g[y]?.[x + stride.dx]
   if (c && c.ch !== ' ') c.color = color
 }
 
@@ -46,8 +48,9 @@ type Pose = {
   color?: string
 }
 
-// What the wander is doing this frame; scenes read it through clawd() so every pose walks along
-const stride = { moving: false, hop: false, squash: false, dir: 1, width: W }
+// What the wander is doing this frame, `dx` columns along; scenes read it through clawd() and put() so every pose walks along
+const STILL = { dx: 0, moving: false, hop: false, squash: false, dir: 1 }
+const stride = { ...STILL, width: W }
 
 /**
  * The face when a scene leaves it alone: mostly content ^ ^ eyes, a look around,
@@ -100,9 +103,9 @@ const clawd = (g: Grid, t: number, pose: Pose = {}) => {
 // A little Clawd, 5 columns x 2 rows, standing on the ground (or a row up when it hops)
 const MINI_TOP = { open: '▗▛█▜▖', blink: '▗███▖', left: '▗▜█▜▖', right: '▗▛█▛▖' }
 // second row: the top halves close under the eyes, the bottom halves are the legs (out, or tucked in mid-step)
-const MINI_LEGS = { stand: '▝▛▀▜▘', a: '▝▛▀▜▘', b: '▝▜▀▛▘' }
+const MINI_LEGS = { a: '▝▛▀▜▘', b: '▝▜▀▛▘' }
 const MINI_COLORS = ['#6FA8DC', '#E8C547', '#7BC67E', '#E88AB5'] // blue, yellow, green, pink
-const mini = (g: Grid, x: number, color: string, { lift = 0, eyes = 'open', legs = 'stand' }: { lift?: number; eyes?: keyof typeof MINI_TOP; legs?: keyof typeof MINI_LEGS } = {}) => {
+const mini = (g: Grid, x: number, color: string, { lift = 0, eyes = 'open', legs = 'a' }: { lift?: number; eyes?: keyof typeof MINI_TOP; legs?: keyof typeof MINI_LEGS } = {}) => {
   put(g, x, 2 - lift, MINI_TOP[eyes], color)
   put(g, x, 3 - lift, MINI_LEGS[legs], color)
 }
@@ -155,7 +158,7 @@ const scenes: Record<string, Scene> = {
   bake: (g, t) => {
     clawd(g, t, { arms: t % 10 < 5 ? 'right' : 'down' })
     put(g, 12, 1, '┌────┐', 'white')
-    put(g, 12, 2, `│${pick(['▒░▒░', '░▒░▒'], t)}│`, 'white')
+    put(g, 12, 2, '│    │', 'white')
     put(g, 13, 2, pick(['▒░▒░', '░▒░▒'], t), 'red')
     put(g, 12, 3, '└────┘', 'white')
     put(g, 14, 0, pick(['~', ' ~', '~ ~'], Math.floor(t / 2)), GRAY)
@@ -196,8 +199,7 @@ const scenes: Record<string, Scene> = {
   herd: (g, t) => {
     const x = 1 + pingPong(t, roam(7))
     clawd(g, t, { x, legs: walkLegs(t), arms: 'up', ...facing(t, goingRight(t, roam(7))) })
-    const dir = t % (2 * roam(7)) < roam(7) ? 1 : -1
-    put(g, x + (dir > 0 ? 11 : -6), 3, pick(['o o o', ' o o o', 'o  o o'], t), 'white') // the flock
+    put(g, x + (goingRight(t, roam(7)) ? 11 : -6), 3, pick(['o o o', ' o o o', 'o  o o'], t), 'white') // the flock
   },
 
   spin: (g, t) => {
@@ -391,7 +393,7 @@ const scenes: Record<string, Scene> = {
     // glides across the ice on one blade then the other, arms out for balance, frost trailing behind
     const span = roam(2)
     const x = 1 + pingPong(t, span)
-    const right = t % (2 * span) < span
+    const right = goingRight(t, span)
     put(g, 0, 3, '─'.repeat(stride.width), 'cyan') // the rink
     const legs = Math.floor(t / 2) % 2 ? 'a' : 'b'
     clawd(g, t, { x, lift: 1, arms: t % 8 < 4 ? 'up' : right ? 'right' : 'left', legs, ...facing(t, right) })
@@ -453,7 +455,7 @@ const reactions: Record<string, Scene> = {
   },
 
   // chatting: it stands still under its speech bubble, thinking, then talking with its hands
-  ponder: (g, t) => scenes.think(g, t),
+  ponder: scenes.think,
   say: (g, t) => clawd(g, t, { arms: pick(['down', 'right', 'down', 'left'] as const, Math.floor(t / 3)), eyes: t % 18 === 0 ? 'blink' : 'open', shade: 'none' }),
 
   wave: (g, t) => {
@@ -516,7 +518,7 @@ const PAUSE = 10 // frames spent standing at each end
 /** Where the wander puts the frame: stroll right, pause, stroll left, pause; a hop at each turn. */
 export const wander = (t: number, width: number) => {
   const span = Math.max(0, Math.min(width - PROPS_WIDTH, 30))
-  if (span === 0) return { dx: 0, moving: false, hop: false, squash: false, dir: 1 }
+  if (span === 0) return STILL
   const period = 2 * (span + PAUSE)
   const p = t % period
   // each end: hop, land with a squash for two frames, then stand
@@ -527,21 +529,12 @@ export const wander = (t: number, width: number) => {
   return { dx: 0, ...atEnd(p - 2 * span - PAUSE), dir: -1 }
 }
 
-const shift = (g: Grid, dx: number): Grid =>
-  dx === 0 ? g : g.map(row => row.map((_, x) => (x - dx >= 0 ? row[x - dx] : { ch: ' ' })))
-
 /** One frame of the stage, as rows of same-colour runs. */
 export const frameRows = (word: string, mode: Mode, t: number, width: number = W, scene?: string) => {
   const name = scene ?? sceneFor(word, mode)
-  const step = WANDERS.has(name) ? wander(t, width) : { dx: 0, moving: false, hop: false, squash: false, dir: 1 }
-  stride.moving = step.moving
-  stride.hop = step.hop
-  stride.squash = step.squash
-  stride.dir = step.dir
-  stride.width = width
-  const g0 = blank(width)
-  ;(scenes[name] ?? reactions[name] ?? scenes.idle)(g0, t)
-  const g = shift(g0, step.dx)
+  Object.assign(stride, WANDERS.has(name) ? wander(t, width) : STILL, { width })
+  const g = blank(width)
+  ;(scenes[name] ?? reactions[name] ?? scenes.idle)(g, t)
   return g.map(row => {
     const runs: { text: string; color?: string; bg?: string }[] = []
     for (const c of row) {
@@ -573,6 +566,7 @@ export const FRAME_MS = 140
 export const ACT_MS = 15_000 // each act runs a quarter of a minute
 export const ACT_FRAMES = Math.round(ACT_MS / FRAME_MS)
 const ROTATION = SCENE_NAMES.filter(n => n !== 'idle' && n !== 'type' && n !== 'talk')
+const STEP = [7, 5, 3, 11, 13].find(k => ROTATION.length % k !== 0) ?? 1 // coprime with the length, so it visits all
 
 /**
  * `played`: rotation acts earlier turns of the session got through, so the rotation picks up where it left off;
@@ -589,8 +583,7 @@ export const sceneAt = ({ word, mode, tick, seed, tool, played = 0, prev }: Cue)
   const act = Math.floor(Math.max(0, tick) / ACT_FRAMES)
   if (act === 0) return tool ? sceneForTool(tool) : sceneFor(word, mode)
   const n = ROTATION.length
-  const step = [7, 5, 3, 11, 13].find(k => n % k !== 0) ?? 1
-  const i = seed + (played + act - 1) * step
+  const i = seed + (played + act - 1) * STEP
   // the next one along is neither of its neighbours, as the step is not ±1
   return ROTATION[i % n] === prev ? ROTATION[(i + 1) % n] : ROTATION[i % n]
 }

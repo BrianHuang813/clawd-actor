@@ -45,10 +45,13 @@ const checkForUpdate = async ($: Engine) => {
   }
 }
 
+/** Moves the show on a frame, which redraws the band. */
+const tick = ($: Engine) => update($, frame, f => f + 1)
+
 /** Plays `scene` over the show for `frames` frames, Clawd saying `say`; redraws at once, even between turns. */
-const react = async ($: Engine, scene: string, say?: string, frames = REACT_FRAMES) => {
+const react = ($: Engine, scene: string, say?: string, frames = REACT_FRAMES) => {
   reaction = { scene, say, left: frames }
-  await update($, frame, f => (f + 1) % 100_000)
+  return tick($)
 }
 
 /** What Claude is up to, for Clawd's system prompt. */
@@ -82,7 +85,7 @@ export const register: Register = on => {
       const isReacting = reaction !== undefined
       if (reaction && --reaction.left <= 0) reaction = undefined
       // a reaction redraws between turns too, one last time as it ends so the stage goes
-      return isTurnRunning || isReacting ? update($, frame, f => (f + 1) % 100_000) : undefined
+      return isTurnRunning || isReacting ? tick($) : undefined
     })
     // last, so the timers run whatever happens here; immediate: /clawd runs mid-turn instead of waiting
     await $.command.register({ name: 'clawd', description: 'Pet, feed or wave at Clawd, or say something to it', argumentHint: '[pet|feed|wave|dance|message]', immediate: true })
