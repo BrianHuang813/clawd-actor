@@ -82,6 +82,9 @@ leaves again after it.
 Requires a Claude Code build with function-hook mods (`claude plugin validate` knows `hooks.json`
 `modules`). Developed and tested on Claude Code 2.1.296.
 
+Clawd lives in the terminal UI: it shows in `claude` in any terminal (including an editor's
+terminal), not in the Desktop app or the VS Code chat panel.
+
 From this repository as a marketplace:
 
 ```
