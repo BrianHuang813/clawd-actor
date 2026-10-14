@@ -2,7 +2,7 @@
 
 A Claude Code mod: while Claude works, **Clawd** walks onto a little stage above the prompt and
 acts out what is going on — the spinner's `-ing` word (*Sautéing*, *Pondering*, *Herding*…) —
-then puts on a show of 31 scenes, a new one every 15 seconds, with little Clawds along for the ride.
+then puts on a show of 32 scenes, a new one every 15 seconds, with little Clawds along for the ride.
 
 ![Clawd watching a baby Clawd hatch, dancing under a disco ball with a little pink Clawd, walking with two little ones in a row, and cooking at a pot that stays put](assets/demo.gif)
 
@@ -10,7 +10,7 @@ then puts on a show of 31 scenes, a new one every 15 seconds, with little Clawds
 
 ## What it does
 
-- **Acts out the spinner word.** 31 scenes, matched by word stem, so *Flambéing* cooks and
+- **Acts out the spinner word.** 32 scenes, matched by word stem, so *Flambéing* cooks and
   *Dilly-dallying* strolls. A word it does not know falls back to what the turn is doing
   (typing for tool use, talking while responding, thinking otherwise).
 - **Acts out the running tool** when one is already running as a turn opens; it picks the
@@ -52,6 +52,7 @@ then puts on a show of 31 scenes, a new one every 15 seconds, with little Clawds
 | juggle / honk | Juggling / Honking, Booping |
 | sketch / weather / thunder | Sketching, Doodling / Misting, Billowing / Thundering |
 | dig / flow | Burrowing, Spelunking / Flowing, Undulating |
+| shift | Beaming, Shifting, Dodging — calls out 閃身步 top to bottom, then flashes across the stage leaving fading afterimages |
 | kick / skate / campfire | Kicking, Dribbling / Skating, Gliding / Kindling, Smoldering — no built-in word matches these yet, so they mostly turn up in the rotation |
 
 ## Talk to Clawd
@@ -68,6 +69,7 @@ then puts on a show of 31 scenes, a new one every 15 seconds, with little Clawds
 | `/clawd feed` | catches a cookie and munches it |
 | `/clawd wave` (or `hi`, `hello`) | waves back |
 | `/clawd dance` | dances under the disco ball |
+| `/clawd shift` (or `閃身步`) | calls out 閃身步 and flash-steps across the stage, afterimages trailing |
 | `/clawd <anything else>` | answers in a speech bubble |
 
 Actions are free and instant. Anything else is a chat: Clawd ponders for a moment, then answers in
@@ -76,6 +78,30 @@ Haiku (one small `haiku` call per message, on your usage) and shows only in Claw
 not written to the transcript, so Claude's own conversation never sees it. Each message stands
 alone; Clawd does not remember earlier ones. Between turns Clawd steps out for the reaction and
 leaves again after it.
+
+### 閃身步 (shift)
+
+閃身步, the *flash step*, is a martial-arts dodge: a burst of speed that carries the fighter aside
+so fast the eye catches only afterimages. Clawd does it as a proper move, name first:
+
+```
+閃
+身  ▓▓▓▓▓▓▓ ▓▓▓▓▓▓▓  ▐▛███▛▌
+步 ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▝▜█████▙▖
+     ▓▓ ▓▓   ▓▓ ▓▓
+```
+
+1. **Calls the move.** 閃, 身, 步 appear one at a time, top to bottom in a column behind Clawd,
+   the way `< HONK! >` is shouted, while Clawd looks the way it is about to go.
+2. **Takes its stance**, arms up, once the name is complete.
+3. **Flashes across the stage** in three frames, leaving an afterimage at each spot it left.
+4. **Lands sliding** with a squash; the afterimages fade (▓ ▒ ░) and are gone, and Clawd hops
+   with a pleased smile.
+
+Then it calls the move again and flashes back the other way, about three seconds a pass.
+`/clawd shift` or `/clawd 閃身步` plays it at once, from the call; as a scene it comes with the
+spinner word *Beaming*, and in the rotation. It needs a terminal font that draws CJK characters two
+columns wide, as nearly all do.
 
 ## Install
 
@@ -190,7 +216,8 @@ Clawd's face, that a turn opens on the running tool or the spinner word and then
 every other scene whatever tools run, picking up where the last turn stopped, that a scene holds
 for its whole act, that the timer animates Clawd during a turn and lets go after it, that `/clawd`
 plays its reactions between turns and shows Haiku's answer (or a fallback) in a bubble that fits
-any script (combining marks included), that only the latest `/clawd` gets its answer shown, that
+any script (combining marks included), that `/clawd shift` calls 閃身步 a character at a time
+before the dash and leaves afterimages that fade, wherever the frame counter stands, that only the latest `/clawd` gets its answer shown, that
 the mods beneath get the rows Clawd leaves them, that the update notice shows only when `main` carries a newer version, and that the
 first session after an update says what is new, once.
 

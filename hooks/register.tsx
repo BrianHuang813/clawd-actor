@@ -16,8 +16,8 @@ let turnBase = 0 // the frame the turn started on: acts count from it
 let seed = 0 // shuffles the session's rotation of scenes
 let played = 0 // rotation acts earlier turns got through
 let shown: Shown | undefined // the scene on stage, held for its act
-// What /clawd set going: a scene played over the show, and what Clawd says, for `left` more frames
-let reaction: { scene: string; say?: string; left: number } | undefined
+// What /clawd set going: a scene played over the show from frame `from`, and what Clawd says, for `left` more frames
+let reaction: { scene: string; say?: string; left: number; from: number } | undefined
 let asked = 0 // /clawd commands so far: a reply to any but the latest is dropped
 const running: { id: string; tool: string }[] = [] // tools in flight, newest last
 
@@ -71,9 +71,9 @@ const checkForUpdate = async ($: Engine) => {
 /** Moves the show on a frame, which redraws the band. */
 const tick = ($: Engine) => update($, frame, f => f + 1)
 
-/** Plays `scene` over the show for `frames` frames, Clawd saying `say`; redraws at once, even between turns. */
-const react = ($: Engine, scene: string, say?: string, frames = REACT_FRAMES) => {
-  reaction = { scene, say, left: frames }
+/** Plays `scene` from its start over the show for `frames` frames, Clawd saying `say`; redraws at once, even between turns. */
+const react = async ($: Engine, scene: string, say?: string, frames = REACT_FRAMES) => {
+  reaction = { scene, say, left: frames, from: (await read($, frame)) + 1 }
   return tick($)
 }
 
@@ -111,7 +111,7 @@ export const register: Register = on => {
       return isTurnRunning || isReacting ? tick($) : undefined
     })
     // last, so the timers run whatever happens here; immediate: /clawd runs mid-turn instead of waiting
-    await $.command.register({ name: 'clawd', description: 'Pet, feed or wave at Clawd, or say something to it', argumentHint: '[pet|feed|wave|dance|message]', immediate: true })
+    await $.command.register({ name: 'clawd', description: 'Pet, feed or wave at Clawd, or say something to it', argumentHint: '[pet|feed|wave|dance|shift|message]', immediate: true })
     return r
   })
 
@@ -174,7 +174,8 @@ export const register: Register = on => {
     const t = await read($, frame)
     const { Box, Text } = $.ui.resolve(e)
     shown = hold(shown, turnBase, { word, mode, tick: t - turnBase, seed, played, tool: running[running.length - 1]?.tool })
-    const rows = frameRows(word, mode, t, width, reaction?.scene ?? shown.scene)
+    // a reaction counts its own frames, so a move like shift opens on its first one
+    const rows = reaction ? frameRows(word, mode, Math.max(0, t - reaction.from), width, reaction.scene) : frameRows(word, mode, t, width, shown.scene)
 
     return (
       <Box flexDirection="column">

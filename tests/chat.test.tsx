@@ -8,6 +8,8 @@ test('a lone action word acts, anything else chats, nothing at all asks for help
   expect(parseClawd('pet')).toEqual({ action: 'pet' })
   expect(parseClawd('  DANCE ')).toEqual({ action: 'disco' })
   expect(parseClawd('hi')).toEqual({ action: 'wave' })
+  expect(parseClawd('Shift')).toEqual({ action: 'shift' })
+  expect(parseClawd('閃身步')).toEqual({ action: 'shift' })
   expect(parseClawd('hi there')).toEqual({ chat: 'hi there' })
   expect(parseClawd('   ')).toEqual({ help: true })
   // only the listed words act, not what every object inherits
@@ -60,6 +62,16 @@ test('/clawd pet brings Clawd out between turns with hearts, then it goes', asyn
   await clock.advance(7000)
   await ui.redraw(BAND)
   expect(await shown(ui)).toBe('below')
+})
+
+test('/clawd shift plays from its first frame: the name is called before the dash, whenever it is asked', async ($, on) => {
+  const { clock, ui } = await start($, on)
+  await $.command.run({ command: 'clawd', args: 'pet' } as any)
+  await clock.advance(1500) // the frame counter moves on meanwhile
+  await $.command.run({ command: 'clawd', args: 'shift' } as any)
+  await ui.redraw(BAND)
+  expect(await shown(ui)).toContain('閃')
+  expect(await shown(ui)).not.toContain('步') // not yet: the name comes a character at a time
 })
 
 test('/clawd with a message asks Haiku as Clawd and shows the answer in a bubble', async ($, on) => {
