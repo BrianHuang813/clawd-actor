@@ -173,8 +173,15 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    // isWorking is the engine's own word on whether a turn runs; the stage shows only where it fits
-    if (e.props.hasSurvey || (!e.props.isWorking && !reaction) || e.props.maxRows < H) return next(e)
+    // read before any early return: the engine tracks the atoms a render reads and redelivers on
+    // their writes — a gated return that reads nothing unregisters the frame dependency, and the
+    // band would never redraw on its own again (the whole-turn blackout)
+    const t = await read($, frame)
+    // isWorking is the engine's own word on whether a turn runs — but not the turn itself: a
+    // command's busy blink (a /reload-plugins, a plugin hot-reload's repaint) turns it on with no
+    // turn started, and the band would flash Clawd for the one frame before the command ends.
+    // isTurnRunning follows the turn; a /clawd reaction plays past both.
+    if (e.props.hasSurvey || ((!e.props.isWorking || !isTurnRunning) && !reaction) || e.props.maxRows < H) return next(e)
 
     const width = Math.min(e.props.bodyColumns, MAX_STAGE)
     // the bubble needs its two border rows besides the text: left out when the band has no room for one line
@@ -183,7 +190,6 @@ export const register: Register = on => {
     // keep whatever other band mods draw here, in the rows Clawd leaves them
     const below = await next({ ...e, props: { ...e.props, maxRows: e.props.maxRows - H - said.length } })
 
-    const t = await read($, frame)
     const { Box, Text } = $.ui.resolve(e)
     shown = hold(shown, turnBase, { word, mode, tick: t - turnBase, seed, played, tool: running[running.length - 1]?.tool })
     // a reaction counts its own frames, so a move like shift opens on its first one
