@@ -24,6 +24,14 @@ const put = (g: Grid, x: number, y: number, s: string, color?: string, bg?: stri
     if (ch !== ' ' && cx >= 0 && cx < g[y].length) g[y][cx] = bg ? { ch, color, bg } : { ch, color }
   })
 }
+/** Paints `s` top to bottom from (x, y), a character a row; each is a wide one taking two cells, the second left empty. */
+const tall = (g: Grid, x: number, y: number, s: string, color?: string) => {
+  const cx = x + stride.dx
+  ;[...s].forEach((ch, i) => {
+    const row = g[y + i]
+    if (row && cx >= 0 && cx + 1 < row.length) [row[cx], row[cx + 1]] = [{ ch, color }, { ch: '', color }]
+  })
+}
 /** Recolours what is already drawn at (x, y), keeping the glyph. */
 const tint = (g: Grid, x: number, y: number, color: string) => {
   const c = g[y]?.[x + stride.dx]
@@ -424,6 +432,31 @@ const scenes: Record<string, Scene> = {
     put(g, 12 + o, 3, '═╳═╳═', '#8B5A2B') // logs
   },
 
+  shift: (g, t) => {
+    // 閃身步: calls the move's name, a character at a time, top to bottom behind it, then flashes across
+    // the stage in three frames, leaving afterimages that fade; then the same back the other way
+    const q = t % 22
+    const right = t % 44 < 22
+    const [home, end] = right ? [3, stride.width - 12] : [stride.width - 12, 3]
+    const dir = right ? 1 : -1
+    const at = [home, home + Math.round((end - home) / 3), home + Math.round(((end - home) * 2) / 3)]
+    if (q < 14) tall(g, right ? home - 3 : home + 10, 0, '閃身步'.slice(0, 1 + Math.floor(q / 3)), 'yellow')
+    // an afterimage where it stood each dash frame, darker and thinner as it fades
+    for (let k = 0; k < 3; k++) {
+      const age = q - 12 - k
+      if (age < 0 || age >= 6) continue
+      const [ink, color] = age < 2 ? ['▓', SHADE] : age < 4 ? ['▒', '#8A4A35'] : ['░', '#5E3D33']
+      put(g, at[k], 1, ` ${ink.repeat(7)} `, color)
+      put(g, at[k], 2, ink.repeat(9), color)
+      put(g, at[k], 3, `  ${ink}${ink} ${ink}${ink}  `, color)
+    }
+    const eyes = right ? 'right' : 'left'
+    if (q < 12) clawd(g, t, { x: home, ...facing(t, right), arms: q < 6 ? 'down' : 'up' }) // the stance
+    else if (q < 14) clawd(g, t, { x: at[q - 11], eyes, arms: right ? 'right' : 'left', legs: 'tuck', shade: right ? 'left' : 'right' })
+    else if (q < 16) clawd(g, t, { x: q === 14 ? end + dir : end, eyes, lift: -1 }) // lands sliding, with a squash
+    else clawd(g, t, { x: end, eyes: 'smile', arms: q < 19 ? 'up' : 'down', lift: q === 17 ? 1 : 0, shade: 'none' })
+  },
+
   flow: (g, t) => {
     clawd(g, t, { lift: t % 6 < 3 ? 1 : 0 })
     const wave = '∿~'
@@ -470,6 +503,7 @@ export const REACTION_NAMES = Object.keys(reactions)
 // Spinner word → scene, by stem; the first match wins
 const VERBS: [RegExp, string][] = [
   [/moonwalk/, 'moonwalk'],
+  [/shift|beam|dodg|sidestep|evad|evasi|flit/, 'shift'],
   [/campfir|bonfir|kindl|smolder|smoulder|stok|crackl|flicker|glow|fire/, 'campfire'],
   [/skat|glid|slid|skid|coast/, 'skate'],
   [/kick|dribbl|scor|punt|volley|soccer|footbal/, 'kick'],
