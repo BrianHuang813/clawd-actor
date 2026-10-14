@@ -6,6 +6,8 @@ import { ACT_FRAMES, FRAME_MS, frameRows, H, hold, type Mode, type Shown } from 
 
 const MAX_STAGE = 60 // widest the wander roams, however wide the terminal
 const frame = atom({ plugin: 'clawd-actor', key: 'frame' } as const, 0)
+// The turn's show, kept in $.state too: a hot reload (/reload-plugins) loses module variables, not state
+const show = atom({ plugin: 'clawd-actor', key: 'show' } as const, { isTurnRunning: false, turnBase: 0, seed: -1, played: 0 })
 
 // The spinner's word, read while it draws. State cannot be written during a render,
 // so it lives here; the frame timer's redraws pick it up.
@@ -68,6 +70,9 @@ const checkForUpdate = async ($: Engine) => {
   }
 }
 
+/** Writes the turn's show through to $.state, for the module a reload brings in. */
+const keep = ($: Engine) => update($, show, () => ({ isTurnRunning, turnBase, seed, played }))
+
 /** Moves the show on a frame, which redraws the band. */
 const tick = ($: Engine) => update($, frame, f => f + 1)
 
@@ -101,8 +106,12 @@ export const register: Register = on => {
   // It ticks all session long but only writes, and so redraws, while a turn runs.
   on('session.start', async ($, e, next) => {
     const r = await next(e)
-    seed = Math.floor(await $.clock.now()) % 9973
-    played = 0
+    // a reload mid-turn picks the show up where it was; a new session starts one
+    ;({ isTurnRunning, turnBase, seed, played } = await read($, show))
+    if (seed < 0) {
+      seed = Math.floor(await $.clock.now()) % 9973
+      await keep($)
+    }
     $.clock.after(UPDATE_CHECK_MS, () => checkForUpdate($)) // on a timer: the session never waits on the network
     $.clock.every(FRAME_MS, () => {
       const isReacting = reaction !== undefined
@@ -133,6 +142,7 @@ export const register: Register = on => {
     isTurnRunning = true
     turnBase = await read($, frame)
     running.length = 0
+    await keep($)
     return next(e)
   })
 
@@ -148,8 +158,10 @@ export const register: Register = on => {
   })
 
   on('turn.complete', async ($, e, next) => {
+    if (e.agentId) return next(e) // a subagent's turn (a workflow's agents too): the main turn runs on
     isTurnRunning = false
     played += Math.floor(((await read($, frame)) - turnBase) / ACT_FRAMES) // acts after the opener
+    await keep($)
     return next(e)
   })
 

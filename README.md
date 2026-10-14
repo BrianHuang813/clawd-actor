@@ -214,7 +214,8 @@ That every scene keeps the stage size at 30, 40 and 60 columns and moves Clawd a
 scenes without set pieces (the rest are checked to stay put), that no prop is ever drawn over
 Clawd's face, that a turn opens on the running tool or the spinner word and then rotates through
 every other scene whatever tools run, picking up where the last turn stopped, that a scene holds
-for its whole act, that the timer animates Clawd during a turn and lets go after it, that `/clawd`
+for its whole act, that the timer animates Clawd during a turn, keeps it going when a subagent's turn ends or
+`/reload-plugins` runs, and lets go after the turn, that `/clawd`
 plays its reactions between turns and shows Haiku's answer (or a fallback) in a bubble that fits
 any script (combining marks included), that `/clawd shift` calls 閃身步 a character at a time
 before the dash and leaves afterimages that fade, wherever the frame counter stands, that only the latest `/clawd` gets its answer shown, that
