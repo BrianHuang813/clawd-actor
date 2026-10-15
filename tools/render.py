@@ -1,10 +1,12 @@
 """Render clawd-actor frames (frames.json from frames.ts) into a GIF that looks like the terminal."""
 import json
 import sys
+import unicodedata
 
 from PIL import Image, ImageDraw, ImageFont
 
 FONT = ImageFont.truetype('/usr/share/fonts/dejavu/DejaVuSansMono.ttf', 18)
+CJK = ImageFont.truetype('/usr/share/fonts/google-droid/DroidSansFallback.ttf', 18)  # 閃身步, two cells each
 FRAME_MS = 140
 PAD = 18
 BG = (24, 24, 27)
@@ -68,7 +70,14 @@ def cell(draw, col, row, ch, color, bg=None):
     if ch == '▁':
         draw.rectangle([x, y + CH * 7 / 8, x + CW - 0.01, y + CH - 0.01], fill=color)
         return
+    if wide(ch):
+        draw.text((x + CW, y + CH / 2), ch, font=CJK, fill=color, anchor='mm')
+        return
     draw.text((x, y), ch, font=FONT, fill=color, anchor='la')
+
+
+def wide(ch):
+    return unicodedata.east_asian_width(ch) in 'WF'
 
 
 def line(draw, col, row, text, color):
@@ -89,7 +98,7 @@ def frame(i, f):
             bg = rgb(run['bg']) if run.get('bg') else None
             for ch in run['text']:
                 cell(d, c, r, ch, color, bg)
-                c += 1
+                c += 2 if wide(ch) else 1  # a wide character's second cell comes through as ''
     spin = '✻✶'[(i // 3) % 2]
     word = f"{f['word']}…"
     line(d, 0, TOP + 5, spin, ORANGE)

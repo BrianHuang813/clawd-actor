@@ -4,9 +4,9 @@ A Claude Code mod: while Claude works, **Clawd** walks onto a little stage above
 acts out what is going on — the spinner's `-ing` word (*Sautéing*, *Pondering*, *Herding*…) —
 then puts on a show of 32 scenes, a new one every 15 seconds, with little Clawds along for the ride.
 
-![Clawd watching a baby Clawd hatch, dancing under a disco ball with a little pink Clawd, walking with two little ones in a row, and cooking at a pot that stays put](assets/demo.gif)
+![Clawd watching a baby Clawd hatch, calling out 閃身步 and flash-stepping across the stage and back, dancing under a disco ball with a little pink Clawd, walking with two little ones in a row, and cooking at a pot that stays put](assets/demo.gif)
 
-*Four scenes at the real frame rate, about 15 s in all (a real turn changes scene every 15 s). Every frame is the mod's own output, rendered by `tools/`.*
+*Five scenes at the real frame rate, about 21 s in all (a real turn changes scene every 15 s). Every frame is the mod's own output, rendered by `tools/`.*
 
 ## What it does
 
@@ -59,7 +59,7 @@ then puts on a show of 32 scenes, a new one every 15 seconds, with little Clawds
 
 `/clawd` runs at once, even while Claude is working, and never interrupts the turn:
 
-![Mid-turn, while Clawd cooks, typing /clawd how's it going? makes Clawd ponder and answer in a speech bubble; then /clawd pet sets hearts floating up](assets/chat.gif)
+![Mid-turn, while Clawd cooks, typing /clawd how's it going? makes Clawd ponder and answer in a speech bubble; then /clawd pet sets hearts floating up, and /clawd shift sends Clawd flash-stepping across the stage and back](assets/chat.gif)
 
 *Clawd's answer here is an example; in a session it comes from Haiku.*
 
@@ -237,8 +237,8 @@ node tools/chat-frames.ts > chat.json   # a mid-turn /clawd chat, with hooks/cha
 python tools/render.py chat.json assets/chat.gif
 ```
 
-`tools/render.py` uses DejaVu Sans Mono and draws block elements as exact rectangles; edit the
-font path at its top for your system.
+`tools/render.py` uses DejaVu Sans Mono (and Droid Sans Fallback for 閃身步) and draws block
+elements as exact rectangles; edit the font paths at its top for your system.
 
 ### Releasing (maintainers)
 

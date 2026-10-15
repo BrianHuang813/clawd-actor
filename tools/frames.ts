@@ -2,6 +2,7 @@ import { frameRows } from '../hooks/scenes.ts'
 // One long turn: each act is [spinner word, scene, frames, note shown beside the spinner]
 const ACTS: [string, string, number, string][] = [
   ['Hatching', 'hatch', 44, ''],
+  ['Beaming', 'shift', 44, ''], // starts on t = 44, the top of its cycle
   ['Boogieing', 'disco', 20, ''],
   ['Moseying', 'walk', 24, ''],
   ['Sautéing', 'cook', 20, ''],
