@@ -43,12 +43,16 @@ test('every scene keeps the stage size; Clawd roams only where its props can com
 })
 
 test('the dressed-up scenes put a costume on Clawd, and its hat stays on stage even mid-hop', () => {
-  expect([...DRESSED].sort()).toEqual(['bake', 'cook', 'kick', 'levitate', 'shift', 'think'])
+  expect([...DRESSED].sort()).toEqual(['bake', 'campfire', 'chalk', 'cook', 'dig', 'disco', 'forge', 'grow', 'herd', 'juggle', 'kick', 'levitate', 'magic', 'shift', 'sketch', 'think'])
   const text = (rows: { text: string }[][]) => rows.map(r => r.map(x => x.text).join(''))
-  // a costume never carries over to a scene without one, nor onto the purple friend by the fire
+  /** Each row as one [glyph, colour, background] per character, from column `from`. */
+  const look = (rows: { text: string; color?: string; bg?: string }[][], from = 0) => rows.map(r => r.flatMap(x => [...x.text].map(ch => [ch, x.color, x.bg])).slice(from))
   for (let t = 0; t < 40; t++) {
+    // a costume never carries over to a scene without one
     frameRows('Pondering', 'thinking', t, 40, 'think')
-    expect(frameRows('Kindling', 'thinking', t, 40, 'campfire')).toEqual(frameRows('Kindling', 'thinking', t, 40, 'campfire', false))
+    expect(frameRows('Moseying', 'thinking', t, 40, 'walk')).toEqual(frameRows('Moseying', 'thinking', t, 40, 'walk', false))
+    // nor onto the purple friend across the fire (from column 21 at this width), only the orange one dresses up
+    expect(look(frameRows('Kindling', 'thinking', t, 40, 'campfire'), 21)).toEqual(look(frameRows('Kindling', 'thinking', t, 40, 'campfire', false), 21))
   }
   for (const width of [30, 40, 60])
     for (const name of DRESSED) {

@@ -34,8 +34,12 @@ then puts on a show of 32 scenes, a new one every 15 seconds, with little Clawds
   fedora with a magnifying glass in hand; kicking, a footballer in a blue number 10 shirt and a
   headband; levitating, an astronaut in a glass helmet with an oxygen tank; cooking or baking, a
   homemaker with a big curly perm and a heart-pocket apron; flash-stepping, a shaolin disciple with
-  prayer beads and the marks on its forehead. The stage keeps its top row for the hats, so they stay
-  on when Clawd hops.
+  prayer beads and the marks on its forehead. It conjures in a wizard's pointed hat and beard, herds
+  in a cowboy hat and neckerchief, forges in a hard hat and hi-vis vest, sketches in a beret with a
+  palette, digs in a miner's lamp helmet, lectures in a mortarboard, grows plants in a straw hat and
+  overalls, spins records under the disco ball in headphones, juggles as a clown with a red nose, and
+  sits by the campfire as a scout. The stage keeps its top row for the hats, so they stay on when
+  Clawd hops.
 - **Has a face.** Happy ^ ^ eyes, blinks, glances around, and sways so its far side falls into
   shadow, after the official Clawd animation; on the move it looks where it is going.
 - **Talks back.** `/clawd` pets, feeds or waves at Clawd, or chats with it, even mid-turn (see

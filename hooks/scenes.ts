@@ -219,6 +219,88 @@ const HOMEMAKER: Costume = {
 }
 COSTUMES.cook = HOMEMAKER
 COSTUMES.bake = HOMEMAKER
+Object.assign(COSTUMES, {
+  // wizard: a tall pointed hat and a long white beard
+  magic: {
+    dress: (g, x, y) => {
+      put(g, x, y - 1, '▁▁▃▆█▆▃▁▁', '#5B4FCF')
+      put(g, x + 3, y + 1, '▜█▛', 'white', ORANGE)
+    },
+  },
+  // cowboy: a hat with its brim curled up at both ends and a dent in the crown, a red neckerchief
+  herd: {
+    dress: (g, x, y) => {
+      put(g, x, y - 1, '▙▄▟█▇█▙▄▟', '#A0703C')
+      put(g, x + 3, y + 1, '▀█▀', 'red', ORANGE)
+    },
+  },
+  // builder: a yellow hard hat and a hi-vis vest with a reflective stripe
+  forge: {
+    dress: (g, x, y) => {
+      put(g, x + 1, y - 1, '▗▟███▙▖', '#F2C230')
+      for (let i = 0; i < 9; i++) tint(g, x + i, y + 1, '#B5D334')
+      put(g, x + 2, y + 1, '─────', 'white', '#B5D334')
+    },
+  },
+  // painter: a beret tipped to one side and a palette in the other hand
+  sketch: {
+    dress: (g, x, y) => {
+      put(g, x + 2, y - 1, '▗▄▟▄▄▄▖', '#D04848')
+      put(g, x - 2, y + 1, '∙', '#56B6C2', WOOD)
+      put(g, x - 1, y + 1, '∙', '#E5C07B', WOOD)
+    },
+  },
+  // miner: a helmet with a lamp at the front
+  dig: {
+    dress: (g, x, y) => {
+      put(g, x + 1, y - 1, '▗▟███▙▖', '#5A6470')
+      put(g, x + 4, y - 1, '●', 'yellow', '#5A6470')
+    },
+  },
+  // professor: a mortarboard, its tassel hanging down beside the head
+  chalk: {
+    dress: (g, x, y) => {
+      put(g, x, y - 1, '▀▀█████▀▀', HAT)
+      put(g, x + 8, y, '▌', 'yellow')
+    },
+  },
+  // farmer: a wide straw hat with a red band, blue overalls
+  grow: {
+    dress: (g, x, y) => {
+      put(g, x - 1, y - 1, '▗▄▄', '#E3C16F')
+      put(g, x + 2, y - 1, '▃▃▃▃▃', 'red', '#E3C16F')
+      put(g, x + 7, y - 1, '▄▄▄▖', '#E3C16F')
+      put(g, x + 2, y + 1, '▄▄▄▄▄', '#4A6FA5', ORANGE)
+      for (let i = 0; i < 9; i++) tint(g, x + i, y + 2, '#4A6FA5')
+    },
+  },
+  // DJ: headphones, the band over the head and a cup on each side
+  disco: {
+    dress: (g, x, y) => {
+      put(g, x, y - 1, '▗▄▄▄▄▄▄▄▖', 'white')
+      put(g, x, y, '█', 'magenta')
+      put(g, x + 8, y, '█', 'magenta')
+    },
+  },
+  // clown: a red nose, tufts of blue hair on both sides and a frilled collar
+  juggle: {
+    dress: (g, x, y) => {
+      put(g, x + 4, y, '●', 'red', ORANGE)
+      put(g, x - 1, y - 1, '▗▄', 'cyan')
+      put(g, x + 8, y - 1, '▄▖', 'cyan')
+      put(g, x - 1, y, '▐█', 'cyan')
+      put(g, x + 8, y, '█▌', 'cyan')
+      ;['yellow', 'magenta', 'cyan', 'magenta', 'yellow'].forEach((c, i) => put(g, x + 2 + i, y + 1, '▀', c, ORANGE))
+    },
+  },
+  // scout: a campaign hat with its peak pinched, a green neckerchief
+  campfire: {
+    dress: (g, x, y) => {
+      put(g, x - 1, y - 1, '▗▄▄▄▟█▙▄▄▄▖', '#B59A5B')
+      put(g, x + 3, y + 1, '▀█▀', '#7BC67E', ORANGE)
+    },
+  },
+} satisfies Record<string, Costume>)
 export const DRESSED = Object.keys(COSTUMES)
 
 type Scene = (g: Grid, t: number) => void
