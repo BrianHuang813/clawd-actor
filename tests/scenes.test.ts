@@ -43,7 +43,7 @@ test('every scene keeps the stage size; Clawd roams only where its props can com
 })
 
 test('the dressed-up scenes put a costume on Clawd, and its hat stays on stage even mid-hop', () => {
-  expect([...DRESSED].sort()).toEqual(['bake', 'chalk', 'cook', 'disco', 'herd', 'juggle', 'kick', 'levitate', 'magic', 'shift', 'sketch', 'think'])
+  expect([...DRESSED].sort()).toEqual(['bake', 'chalk', 'cook', 'disco', 'herd', 'juggle', 'kick', 'levitate', 'magic', 'sketch', 'think'])
   const text = (rows: { text: string }[][]) => rows.map(r => r.map(x => x.text).join(''))
   /** Each row as one [glyph, colour, background] per character, from column `from`. */
   const look = (rows: { text: string; color?: string; bg?: string }[][], from = 0) => rows.map(r => r.flatMap(x => [...x.text].map(ch => [ch, x.color, x.bg])).slice(from))
@@ -67,8 +67,7 @@ test('the dressed-up scenes put a costume on Clawd, and its hat stays on stage e
         const head = plain.findIndex(r => /▐[▛▜█^]{5}▌/.test(r))
         if (head === 1) {
           hops++
-          // jumped up into the top row, the hat still shows above it (the shaolin disciple wears none)
-          if (name !== 'shift') expect(dressed[0].trim()).not.toBe('')
+          expect(dressed[0].trim()).not.toBe('') // jumped up into the top row, the hat still shows above it
         }
       }
       if (name === 'levitate') expect(hops).toBe(120) // floats all the way, helmet on

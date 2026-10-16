@@ -4,7 +4,7 @@ A Claude Code mod: while Claude works, **Clawd** walks onto a little stage above
 acts out what is going on — the spinner's `-ing` word (*Sautéing*, *Pondering*, *Herding*…) —
 then puts on a show of 32 scenes, a new one every 15 seconds, with little Clawds along for the ride.
 
-![Clawd as a detective in a fedora, magnifying glass in hand, pondering under a thought bubble; as a shaolin disciple calling out 閃身步 and flash-stepping across the stage and back; and as a homemaker in a curly perm and apron, cooking at a pot that stays put](assets/demo.gif)
+![Clawd as a detective in a fedora, magnifying glass in hand, pondering under a thought bubble; calling out 閃身步 and flash-stepping across the stage and back; and as a homemaker in a curly perm and apron, cooking at a pot that stays put](assets/demo.gif)
 
 *Three scenes at the real frame rate, about 16 s in all (a real turn changes scene every 15 s). Every frame is the mod's own output, rendered by `tools/`.*
 
@@ -33,11 +33,10 @@ then puts on a show of 32 scenes, a new one every 15 seconds, with little Clawds
 - **Dresses for the part.** Thinking (and reading or searching files), it is a detective in a
   fedora with a magnifying glass in hand; kicking, a footballer in a blue number 10 shirt and a
   headband; levitating, an astronaut in a glass helmet with an oxygen tank; cooking or baking, a
-  homemaker with a big curly perm and a heart-pocket apron; flash-stepping, a shaolin disciple with
-  prayer beads and the marks on its forehead. It conjures in a wizard's pointed hat and beard, herds
-  in a cowboy hat and neckerchief, sketches in a beret with a palette, lectures in a mortarboard,
-  spins records under the disco ball in headphones and juggles as a clown with a red nose. The stage keeps its top row for the hats, so they stay on when
-  Clawd hops.
+  homemaker with a big curly perm and a heart-pocket apron. It conjures in a wizard's pointed hat
+  and beard, herds in a cowboy hat and neckerchief, sketches in a beret with a palette, lectures in
+  a mortarboard, spins records under the disco ball in headphones and juggles as a clown with a red
+  nose. The stage keeps its top row for the hats, so they stay on when Clawd hops.
 - **Has a face.** Happy ^ ^ eyes, blinks, glances around, and sways so its far side falls into
   shadow, after the official Clawd animation; on the move it looks where it is going.
 - **Talks back.** `/clawd` pets, feeds or waves at Clawd, or chats with it, even mid-turn (see

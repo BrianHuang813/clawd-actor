@@ -148,7 +148,6 @@ const HAT_BAND = '#8E8E99'
 const LENS = PURPLE
 const JERSEY = '#3D7BD9'
 const PERM = '#8C62B0'
-const BEADS = '#5C3317'
 // Which quarters of a cell each block fills: a (top left), b (top right), c (bottom left), d (bottom right)
 const QUARTERS: Record<string, string> = { '▘': 'a', '▝': 'b', '▖': 'c', '▗': 'd', '▀': 'ab', '▄': 'cd', '▌': 'ac', '▐': 'bd', '▛': 'abc', '▜': 'abd', '▙': 'acd', '▟': 'bcd', '█': 'abcd' }
 
@@ -194,13 +193,6 @@ const COSTUMES: Record<string, Costume> = {
       put(g, x, y, '▐', 'white')
       put(g, x + 8, y, '▌', 'white')
       put(g, x - 2, y + 1, '▐█', GRAY)
-    },
-  },
-  // shaolin disciple: prayer beads round the neck and the ordination marks on its forehead, between the eyes and above them
-  shift: {
-    dress: (g, x, y) => {
-      put(g, x + 2, y + 1, '∙·∙·∙', BEADS, ORANGE)
-      put(g, x + 3, y, '˙˙˙', BEADS, ORANGE)
     },
   },
 }
