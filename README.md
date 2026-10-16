@@ -4,9 +4,9 @@ A Claude Code mod: while Claude works, **Clawd** walks onto a little stage above
 acts out what is going on — the spinner's `-ing` word (*Sautéing*, *Pondering*, *Herding*…) —
 then puts on a show of 32 scenes, a new one every 15 seconds, with little Clawds along for the ride.
 
-![Clawd watching a baby Clawd hatch, calling out 閃身步 and flash-stepping across the stage and back, dancing under a disco ball with a little pink Clawd, walking with two little ones in a row, and cooking at a pot that stays put](assets/demo.gif)
+![Clawd as a detective in a fedora, magnifying glass in hand, pondering under a thought bubble; as a shaolin disciple calling out 閃身步 and flash-stepping across the stage and back; and as a homemaker in a curly perm and apron, cooking at a pot that stays put](assets/demo.gif)
 
-*Five scenes at the real frame rate, about 21 s in all (a real turn changes scene every 15 s). Every frame is the mod's own output, rendered by `tools/`.*
+*Three scenes at the real frame rate, about 16 s in all (a real turn changes scene every 15 s). Every frame is the mod's own output, rendered by `tools/`.*
 
 ## What it does
 
