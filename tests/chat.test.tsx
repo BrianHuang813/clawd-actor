@@ -118,10 +118,10 @@ test('the mods beneath get the band less the rows Clawd takes', async ($, on) =>
   expect(rows.at(-1)).toBe(10) // Clawd away: all of it
   await $.command.run({ command: 'clawd', args: 'pet' } as any)
   await ui.redraw(BAND)
-  expect(rows.at(-1)).toBe(10 - 4) // the stage
+  expect(rows.at(-1)).toBe(10 - 5) // the stage
   await $.command.run({ command: 'clawd', args: 'hello there' } as any)
   await ui.redraw(BAND)
-  expect(rows.at(-1)).toBe(10 - 4 - 3) // the stage and a one-line bubble
+  expect(rows.at(-1)).toBe(10 - 5 - 3) // the stage and a one-line bubble
   await ui.redraw({ ...BAND, maxRows: 3 })
   expect(await shown(ui)).toBe('below') // no room for the stage: Clawd stays out
   expect(rows.at(-1)).toBe(3)

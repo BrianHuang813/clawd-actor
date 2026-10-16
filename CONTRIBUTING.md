@@ -36,7 +36,7 @@ check it on its own.
 
 That every scene keeps the stage size at 30, 40 and 60 columns and moves Clawd about only in the
 scenes without set pieces (the rest are checked to stay put), that no prop is ever drawn over
-Clawd's face, that a turn opens on the running tool or the spinner word and then rotates through
+Clawd's face, that the dressed-up scenes put their costume on Clawd and keep its hat on stage even mid-hop, that a turn opens on the running tool or the spinner word and then rotates through
 every other scene whatever tools run, picking up where the last turn stopped, that a scene holds
 for its whole act, that the timer animates Clawd during a turn, keeps it going when a subagent's turn ends or
 `/reload-plugins` runs, and lets go after the turn, that Clawd stays out while a command (not a turn) keeps

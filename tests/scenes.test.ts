@@ -1,6 +1,6 @@
 import { test, expect } from 'claude-code/testing'
 import { cells } from '../hooks/chat'
-import { frameRows, SCENE_NAMES, REACTION_NAMES, WANDERS, H, sceneFor, sceneAt, sceneForTool, hold, ACT_FRAMES } from '../hooks/scenes'
+import { frameRows, SCENE_NAMES, REACTION_NAMES, WANDERS, DRESSED, H, sceneFor, sceneAt, sceneForTool, hold, ACT_FRAMES } from '../hooks/scenes'
 
 const PROBE: Record<string, string> = { think: 'Pondering', cook: 'Cooking', bake: 'Baking', brew: 'Brewing', walk: 'Moseying', run: 'Scampering',
   moonwalk: 'Moonwalking', herd: 'Herding', spin: 'Spinning', magic: 'Conjuring', levitate: 'Levitating', hatch: 'Hatching', grow: 'Sprouting',
@@ -16,7 +16,7 @@ test('every scene keeps the stage size; Clawd roams only where its props can com
       expect(sceneFor(PROBE[name], modeOf(name))).toBe(name)
       const columns = new Set<number>()
       for (let t = 0; t < 120; t++) {
-        const rows = frameRows(PROBE[name], modeOf(name), t, width).map(r => r.map(x => x.text).join(''))
+        const rows = frameRows(PROBE[name], modeOf(name), t, width, undefined, false).map(r => r.map(x => x.text).join(''))
         expect(rows.length).toBe(H)
         for (const r of rows) expect(cells(r)).toBe(width) // terminal columns: a CJK character takes two
         const col = rows.map(r => [...r].indexOf('▐')).find(i => i >= 0) // Clawd's head; the little ones have none
@@ -39,6 +39,35 @@ test('every scene keeps the stage size; Clawd roams only where its props can com
         columns.add(rows.map(r => [...r].indexOf('▐')).find(i => i >= 0)!)
       }
       expect(columns.size).toBe(1)
+    }
+})
+
+test('the dressed-up scenes put a costume on Clawd, and its hat stays on stage even mid-hop', () => {
+  expect([...DRESSED].sort()).toEqual(['bake', 'cook', 'kick', 'levitate', 'shift', 'think'])
+  const text = (rows: { text: string }[][]) => rows.map(r => r.map(x => x.text).join(''))
+  // a costume never carries over to a scene without one, nor onto the purple friend by the fire
+  for (let t = 0; t < 40; t++) {
+    frameRows('Pondering', 'thinking', t, 40, 'think')
+    expect(frameRows('Kindling', 'thinking', t, 40, 'campfire')).toEqual(frameRows('Kindling', 'thinking', t, 40, 'campfire', false))
+  }
+  for (const width of [30, 40, 60])
+    for (const name of DRESSED) {
+      let hops = 0
+      for (let t = 0; t < 120; t++) {
+        const plain = text(frameRows(PROBE[name], modeOf(name), t, width, undefined, false))
+        const dressed = text(frameRows(PROBE[name], modeOf(name), t, width))
+        expect(dressed.length).toBe(H)
+        for (const r of dressed) expect(cells(r)).toBe(width)
+        expect(plain[0].trim()).toBe('') // the top row is left for what Clawd wears on its head
+        expect(dressed.join('\n')).not.toBe(plain.join('\n'))
+        const head = plain.findIndex(r => /▐[▛▜█^]{5}▌/.test(r))
+        if (head === 1) {
+          hops++
+          // jumped up into the top row, the hat still shows above it (the shaolin disciple wears none)
+          if (name !== 'shift') expect(dressed[0].trim()).not.toBe('')
+        }
+      }
+      if (name === 'levitate') expect(hops).toBe(120) // floats all the way, helmet on
     }
 })
 
@@ -93,13 +122,13 @@ test('shift calls out 閃身步 top to bottom behind Clawd, then dashes off leav
       const home = head(frame(start))
       const dash = Array.from({ length: 22 }, (_, i) => start + i).find(t => head(frame(t)) !== home)!
       expect(dash).toBeGreaterThan(start + 6)
-      // the name comes a character at a time: 閃, then 身, then 步, all in one column, one row each
-      const order = ['閃', '身', '步'].map((ch, y) => Array.from({ length: 22 }, (_, i) => start + i).find(t => col(frame(t), y, ch) >= 0)!)
+      // the name comes a character at a time: 閃, then 身, then 步, all in one column, one row each from below the hat row
+      const order = ['閃', '身', '步'].map((ch, y) => Array.from({ length: 22 }, (_, i) => start + i).find(t => col(frame(t), y + 1, ch) >= 0)!)
       expect(order[0]).toBe(start)
       expect(order[0] < order[1] && order[1] < order[2] && order[2] < dash).toBe(true)
       const called = frame(dash - 1)
-      const x = col(called, 0, '閃')
-      expect([col(called, 1, '身'), col(called, 2, '步')]).toEqual([x, x])
+      const x = col(called, 1, '閃')
+      expect([col(called, 2, '身'), col(called, 3, '步')]).toEqual([x, x])
       // behind Clawd: on the far side from where it is going
       const away = head(frame(start + 21))
       expect(away).not.toBe(home)

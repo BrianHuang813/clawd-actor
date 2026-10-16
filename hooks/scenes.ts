@@ -1,9 +1,11 @@
 // Clawd's stage: a width x H grid of cells. Every scene draws Clawd plus props for one frame,
-// then the whole frame wanders left and right across the stage.
+// then the whole frame wanders left and right across the stage. The top row is kept for what Clawd
+// wears on its head: scenes draw from the row below it, so a hat still shows when Clawd hops.
 // Pure functions only, so the frames can be checked without the engine.
 
 export const W = 40 // default stage width; the band passes its own
-export const H = 4
+export const H = 5
+const HEAD = 1 // rows above scene row 0: the hat row
 export const ORANGE = '#D77757'
 const SHADE = '#B35A3E' // the side turned away, as the official animation shades it
 const INK = '#1E1E1E' // eye colour where an eye is drawn on top of the body
@@ -18,23 +20,24 @@ const blank = (width: number): Grid => Array.from({ length: H }, () => Array(wid
 
 /** Paints `s` at (x, y), moved along by the wander; spaces are transparent so props can overlap Clawd's gaps. */
 const put = (g: Grid, x: number, y: number, s: string, color?: string, bg?: string) => {
-  if (y < 0 || y >= H) return
+  const row = g[y + HEAD]
+  if (!row) return
   ;[...s].forEach((ch, i) => {
     const cx = x + stride.dx + i
-    if (ch !== ' ' && cx >= 0 && cx < g[y].length) g[y][cx] = bg ? { ch, color, bg } : { ch, color }
+    if (ch !== ' ' && cx >= 0 && cx < row.length) row[cx] = bg ? { ch, color, bg } : { ch, color }
   })
 }
 /** Paints `s` top to bottom from (x, y), a character a row; each is a wide one taking two cells, the second left empty. */
 const tall = (g: Grid, x: number, y: number, s: string, color?: string) => {
   const cx = x + stride.dx
   ;[...s].forEach((ch, i) => {
-    const row = g[y + i]
+    const row = g[y + HEAD + i]
     if (row && cx >= 0 && cx + 1 < row.length) [row[cx], row[cx + 1]] = [{ ch, color }, { ch: '', color }]
   })
 }
 /** Recolours what is already drawn at (x, y), keeping the glyph. */
 const tint = (g: Grid, x: number, y: number, color: string) => {
-  const c = g[y]?.[x + stride.dx]
+  const c = g[y + HEAD]?.[x + stride.dx]
   if (c && c.ch !== ' ') c.color = color
 }
 
@@ -90,13 +93,14 @@ const clawd = (g: Grid, t: number, pose: Pose = {}) => {
   const swing = t % 2 === 0 ? 'left' : 'right'
   const color = pose.color ?? ORANGE
   const shade = pose.shade ?? sway(t)
+  const costume = color === ORANGE ? wearing : undefined
   put(g, x, y, TOP[eyes], color)
   if (eyes === 'smile') {
     // the happy closed eyes: dark arcs sitting on the body
     put(g, x + 2, y, '^', INK, color)
     put(g, x + 6, y, '^', INK, color)
   }
-  put(g, x, y + 1, MID[lift < 0 ? 'flat' : pose.arms ?? (stride.moving ? swing : 'down')], color)
+  put(g, x, y + 1, MID[lift < 0 ? 'flat' : costume?.arms ?? pose.arms ?? (stride.moving ? swing : 'down')], color)
   const legs = pose.legs ?? (stride.moving ? walkLegs(t) : shade === 'none' ? 'curl' : 'stand')
   put(g, x, y + 2, LEGS[legs], color)
   // turned a little: the far edge of the body falls into shadow
@@ -106,6 +110,7 @@ const clawd = (g: Grid, t: number, pose: Pose = {}) => {
     tint(g, mid, y + 1, SHADE)
     tint(g, shade === 'left' ? x + 1 : x + 7, y + 1, SHADE)
   }
+  costume?.dress(g, x, y)
 }
 
 // A little Clawd, 5 columns x 2 rows, standing on the ground (or a row up when it hops)
@@ -132,6 +137,89 @@ const facing = (t: number, right: boolean): Pose => ({
   shade: right ? 'left' : 'right',
 })
 const pick = <T,>(xs: readonly T[], t: number) => xs[t % xs.length]
+
+// ---- Costumes: some scenes dress Clawd for the part. Drawn over Clawd at its x and head row y, so they hop along ----
+
+type Costume = { dress: (g: Grid, x: number, y: number) => void; arms?: keyof typeof MID }
+let wearing: Costume | undefined // the costume this frame's scene puts on the orange Clawd
+
+const HAT = '#3A3A42' // charcoal, not black: a black hat would vanish on a dark terminal
+const HAT_BAND = '#8E8E99'
+const LENS = PURPLE
+const JERSEY = '#3D7BD9'
+const PERM = '#8C62B0'
+const BEADS = '#5C3317'
+// Which quarters of a cell each block fills: a (top left), b (top right), c (bottom left), d (bottom right)
+const QUARTERS: Record<string, string> = { '▘': 'a', '▝': 'b', '▖': 'c', '▗': 'd', '▀': 'ab', '▄': 'cd', '▌': 'ac', '▐': 'bd', '▛': 'abc', '▜': 'abd', '▙': 'acd', '▟': 'bcd', '█': 'abcd' }
+
+/** A hat brim over the top half of each cell from x, keeping the bottom half as drawn, so the eyes peek out under it. */
+const brow = (g: Grid, x: number, y: number, n: number) => {
+  const row = g[y + HEAD]
+  for (let i = 0; i < n; i++) {
+    const c = row?.[x + stride.dx + i]
+    if (!c) continue
+    const q = QUARTERS[c.ch] ?? '' // ^ happy eyes: shut under the brim
+    const [ll, lr] = [q.includes('c'), q.includes('d')]
+    // a cell takes two colours: where only one bottom quarter is drawn, the hat's fills the other (an eye in shadow)
+    row[x + stride.dx + i] = ll && lr ? { ch: '▀', color: HAT, bg: c.bg ?? c.color } : ll || lr ? { ch: ll ? '▖' : '▗', color: c.color, bg: HAT } : { ch: '▀', color: HAT }
+  }
+}
+
+const COSTUMES: Record<string, Costume> = {
+  // detective: a fedora with a band, its brim over the brow, and a magnifying glass held out in the right hand
+  think: {
+    arms: 'right',
+    dress: (g, x, y) => {
+      put(g, x + 3, y - 1, '▃▃▃▃▃', HAT_BAND, HAT)
+      brow(g, x + 1, y, 7)
+      put(g, x, y, '▝', HAT)
+      put(g, x + 8, y, '▀▖', HAT) // the brim tips down on the right
+      put(g, x + 9, y + 1, '▄', LENS) // the handle, from the hand
+      put(g, x + 10, y, '▗▖', LENS)
+      put(g, x + 10, y + 1, '▚▞', LENS)
+    },
+  },
+  // footballer: a blue number 10 shirt and a white headband
+  kick: {
+    dress: (g, x, y) => {
+      for (let i = 0; i < 9; i++) tint(g, x + i, y + 1, JERSEY)
+      put(g, x + 3, y + 1, '10', 'white', JERSEY)
+      put(g, x + 1, y - 1, '▗▄▄▄▄▄▖', 'white')
+    },
+  },
+  // astronaut: a glass helmet close round the head, the face left clear, and an oxygen tank on its back
+  levitate: {
+    dress: (g, x, y) => {
+      put(g, x, y - 1, '▗▄▄▄▄▄▄▄▖', 'white')
+      put(g, x, y, '▐', 'white')
+      put(g, x + 8, y, '▌', 'white')
+      put(g, x - 2, y + 1, '▐█', GRAY)
+    },
+  },
+  // shaolin disciple: prayer beads round the neck and the ordination marks on its forehead, between the eyes and above them
+  shift: {
+    dress: (g, x, y) => {
+      put(g, x + 2, y + 1, '∙·∙·∙', BEADS, ORANGE)
+      put(g, x + 3, y, '˙˙˙', BEADS, ORANGE)
+    },
+  },
+}
+// homemaker, at the stove and the oven alike: a big curly perm and a white apron with a heart pocket
+const HOMEMAKER: Costume = {
+  dress: (g, x, y) => {
+    put(g, x - 1, y - 1, '▗▟█▙▟█▙▟█▙▖', PERM)
+    put(g, x - 1, y, '▐█▌', PERM)
+    put(g, x + 7, y, '▐█▌', PERM)
+    put(g, x - 1, y + 1, '▝▘', PERM)
+    put(g, x + 8, y + 1, '▝▘', PERM)
+    put(g, x + 2, y + 1, '▄▄▄▄▄', 'white', ORANGE)
+    put(g, x + 4, y + 1, '♥', MINI_COLORS[3], 'white')
+    put(g, x + 3, y + 2, '▀▀▀', 'white')
+  },
+}
+COSTUMES.cook = HOMEMAKER
+COSTUMES.bake = HOMEMAKER
+export const DRESSED = Object.keys(COSTUMES)
 
 type Scene = (g: Grid, t: number) => void
 
@@ -334,7 +422,7 @@ const scenes: Record<string, Scene> = {
     const p = t % 48
     const [l1, l2] = pick(LESSONS, Math.floor(t / 48))
     const wipe = (from: number, to: number) => {
-      for (let y = from; y < 3; y++) for (let x = BX; x < Math.min(to, g[y].length); x++) g[y][x] = { ch: ' ', color: 'white', bg: BOARD }
+      for (let y = from + HEAD; y < 3 + HEAD; y++) for (let x = BX; x < Math.min(to, g[y].length); x++) g[y][x] = { ch: ' ', color: 'white', bg: BOARD }
     }
     wipe(0, BX + 10)
     put(g, BX, 3, '▀▀▀▀▀▀▀▀▀▀', WOOD) // chalk tray
@@ -367,7 +455,7 @@ const scenes: Record<string, Scene> = {
     clawd(g, t, { eyes: 'open', arms: 'up' })
     // the cloud hangs beside it, so the rain never falls on its face
     put(g, 12, 0, '☁☁☁', 'white')
-    for (let y = 1; y < H; y++) put(g, 12 + ((t + y) % 3), y, '╵', 'cyan')
+    for (let y = 1; y < H - HEAD; y++) put(g, 12 + ((t + y) % 3), y, '╵', 'cyan')
   },
 
   thunder: (g, t) => {
@@ -563,10 +651,11 @@ export const wander = (t: number, width: number) => {
   return { dx: 0, ...atEnd(p - 2 * span - PAUSE), dir: -1 }
 }
 
-/** One frame of the stage, as rows of same-colour runs. */
-export const frameRows = (word: string, mode: Mode, t: number, width: number = W, scene?: string) => {
+/** One frame of the stage, as rows of same-colour runs; `dressed` false leaves the scene's costume off. */
+export const frameRows = (word: string, mode: Mode, t: number, width: number = W, scene?: string, dressed = true) => {
   const name = scene ?? sceneFor(word, mode)
   Object.assign(stride, WANDERS.has(name) ? wander(t, width) : STILL, { width })
+  wearing = dressed ? COSTUMES[name] : undefined
   const g = blank(width)
   ;(scenes[name] ?? reactions[name] ?? scenes.idle)(g, t)
   return g.map(row => {

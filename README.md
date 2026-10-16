@@ -30,6 +30,12 @@ then puts on a show of 32 scenes, a new one every 15 seconds, with little Clawds
   its idle hop a beat late, two dance backup, one dances under the disco ball, two walk in a row
   behind it (and lead the way back), two sit by the campfire when the stage is wide enough, and
   one hatches from the egg, stands in its shell and hops out to say hello.
+- **Dresses for the part.** Thinking (and reading or searching files), it is a detective in a
+  fedora with a magnifying glass in hand; kicking, a footballer in a blue number 10 shirt and a
+  headband; levitating, an astronaut in a glass helmet with an oxygen tank; cooking or baking, a
+  homemaker with a big curly perm and a heart-pocket apron; flash-stepping, a shaolin disciple with
+  prayer beads and the marks on its forehead. The stage keeps its top row for the hats, so they stay
+  on when Clawd hops.
 - **Has a face.** Happy ^ ^ eyes, blinks, glances around, and sways so its far side falls into
   shadow, after the official Clawd animation; on the move it looks where it is going.
 - **Talks back.** `/clawd` pets, feeds or waves at Clawd, or chats with it, even mid-turn (see
@@ -167,7 +173,8 @@ without calling `next(e)` hides everything beneath it — if Clawd never shows u
   turn runs; the band reads it, which subscribes it to redraws. A timer started inside a
   `turn.start` hook does not outlive that dispatch, which is why it lives in `session.start`.
 - Whether to draw at all follows the band's own `isWorking` prop.
-- `hooks/scenes.ts` is pure: a 4-row grid of cells, a scene per name, `sceneAt()` choosing an
+- `hooks/scenes.ts` is pure: a 5-row grid of cells (the top one for hats), a scene per name, a costume per
+  dressed-up scene drawn over Clawd wherever it stands, `sceneAt()` choosing an
   act's scene, `hold()` keeping it for the whole act, and `frameRows()` turning the grid into
   coloured runs.
 - The update notice: `session.start` sets a one-shot timer that, two seconds later, reads the

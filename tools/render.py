@@ -32,7 +32,8 @@ ascent, descent = FONT.getmetrics()
 CW = round(FONT.getlength('M'))
 CH = ascent + descent  # block elements span ascent+descent, so rows touch
 TOP = max(len(f.get('bubble', [])) for f in data['frames'])  # rows for Clawd's speech bubble, if any frame has one
-ROWS = TOP + 4 + 1 + 1 + 1 + 3  # bubble, stage, gap, spinner, gap, prompt box
+STAGE = len(data['frames'][0]['rows'])
+ROWS = TOP + STAGE + 1 + 1 + 1 + 3  # bubble, stage, gap, spinner, gap, prompt box
 W, H = PAD * 2 + CW * cols, PAD * 2 + CH * ROWS
 WHITE = COLORS['white']
 
@@ -41,8 +42,10 @@ WHITE = COLORS['white']
 QUADS = {
     '█': 'abcd', '▀': 'ab', '▄': 'cd', '▌': 'ac', '▐': 'bd',
     '▖': 'c', '▗': 'd', '▘': 'a', '▝': 'b',
-    '▙': 'acd', '▛': 'abc', '▜': 'abd', '▟': 'bcd',
+    '▙': 'acd', '▛': 'abc', '▜': 'abd', '▟': 'bcd', '▞': 'bc', '▚': 'ad',
 }
+
+EIGHTHS = {'▁': 1, '▂': 2, '▃': 3, '▅': 5, '▆': 6, '▇': 7}
 
 
 def rgb(name):
@@ -67,8 +70,8 @@ def cell(draw, col, row, ch, color, bg=None):
             qy = y + (hh if q in 'cd' else 0)
             draw.rectangle([qx, qy, qx + hw - 0.01, qy + hh - 0.01], fill=color)
         return
-    if ch == '▁':
-        draw.rectangle([x, y + CH * 7 / 8, x + CW - 0.01, y + CH - 0.01], fill=color)
+    if ch in EIGHTHS:  # lower blocks, ▁ an eighth of the cell high … ▇ seven
+        draw.rectangle([x, y + CH * (1 - EIGHTHS[ch] / 8), x + CW - 0.01, y + CH - 0.01], fill=color)
         return
     if wide(ch):
         draw.text((x + CW, y + CH / 2), ch, font=CJK, fill=color, anchor='mm')
@@ -101,20 +104,20 @@ def frame(i, f):
                 c += 2 if wide(ch) else 1  # a wide character's second cell comes through as ''
     spin = '✻✶'[(i // 3) % 2]
     word = f"{f['word']}…"
-    line(d, 0, TOP + 5, spin, ORANGE)
-    line(d, 2, TOP + 5, word, ORANGE)
+    line(d, 0, TOP + STAGE + 1, spin, ORANGE)
+    line(d, 2, TOP + STAGE + 1, word, ORANGE)
     tail = f" · {f['note']}" if f['note'] else ' (esc to interrupt)'
-    line(d, 2 + len(word), TOP + 5, tail, DIM)
+    line(d, 2 + len(word), TOP + STAGE + 1, tail, DIM)
     box = cols
-    line(d, 0, TOP + 7, '╭' + '─' * (box - 2) + '╮', BORDER)
-    line(d, 0, TOP + 8, '│', BORDER)
-    line(d, 2, TOP + 8, '>', DIM)
+    line(d, 0, TOP + STAGE + 3, '╭' + '─' * (box - 2) + '╮', BORDER)
+    line(d, 0, TOP + STAGE + 4, '│', BORDER)
+    line(d, 2, TOP + STAGE + 4, '>', DIM)
     typed = f.get('prompt', '')
-    line(d, 4, TOP + 8, typed, WHITE)
+    line(d, 4, TOP + STAGE + 4, typed, WHITE)
     if typed:
-        cell(d, 4 + len(typed), TOP + 8, '▌', DIM)  # the cursor
-    line(d, box - 1, TOP + 8, '│', BORDER)
-    line(d, 0, TOP + 9, '╰' + '─' * (box - 2) + '╯', BORDER)
+        cell(d, 4 + len(typed), TOP + STAGE + 4, '▌', DIM)  # the cursor
+    line(d, box - 1, TOP + STAGE + 4, '│', BORDER)
+    line(d, 0, TOP + STAGE + 5, '╰' + '─' * (box - 2) + '╯', BORDER)
     return im
 
 
