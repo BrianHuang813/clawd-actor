@@ -234,14 +234,6 @@ Object.assign(COSTUMES, {
       put(g, x + 3, y + 1, '▀█▀', 'red', ORANGE)
     },
   },
-  // builder: a yellow hard hat and a hi-vis vest with a reflective stripe
-  forge: {
-    dress: (g, x, y) => {
-      put(g, x + 1, y - 1, '▗▟███▙▖', '#F2C230')
-      for (let i = 0; i < 9; i++) tint(g, x + i, y + 1, '#B5D334')
-      put(g, x + 2, y + 1, '─────', 'white', '#B5D334')
-    },
-  },
   // painter: a beret tipped to one side and a palette in the other hand
   sketch: {
     dress: (g, x, y) => {
@@ -250,28 +242,11 @@ Object.assign(COSTUMES, {
       put(g, x - 1, y + 1, '∙', '#E5C07B', WOOD)
     },
   },
-  // miner: a helmet with a lamp at the front
-  dig: {
-    dress: (g, x, y) => {
-      put(g, x + 1, y - 1, '▗▟███▙▖', '#5A6470')
-      put(g, x + 4, y - 1, '●', 'yellow', '#5A6470')
-    },
-  },
   // professor: a mortarboard, its tassel hanging down beside the head
   chalk: {
     dress: (g, x, y) => {
       put(g, x, y - 1, '▀▀█████▀▀', HAT)
       put(g, x + 8, y, '▌', 'yellow')
-    },
-  },
-  // farmer: a wide straw hat with a red band, blue overalls
-  grow: {
-    dress: (g, x, y) => {
-      put(g, x - 1, y - 1, '▗▄▄', '#E3C16F')
-      put(g, x + 2, y - 1, '▃▃▃▃▃', 'red', '#E3C16F')
-      put(g, x + 7, y - 1, '▄▄▄▖', '#E3C16F')
-      put(g, x + 2, y + 1, '▄▄▄▄▄', '#4A6FA5', ORANGE)
-      for (let i = 0; i < 9; i++) tint(g, x + i, y + 2, '#4A6FA5')
     },
   },
   // DJ: headphones, the band over the head and a cup on each side
@@ -291,13 +266,6 @@ Object.assign(COSTUMES, {
       put(g, x - 1, y, '▐█', 'cyan')
       put(g, x + 8, y, '█▌', 'cyan')
       ;['yellow', 'magenta', 'cyan', 'magenta', 'yellow'].forEach((c, i) => put(g, x + 2 + i, y + 1, '▀', c, ORANGE))
-    },
-  },
-  // scout: a campaign hat with its peak pinched, a green neckerchief
-  campfire: {
-    dress: (g, x, y) => {
-      put(g, x - 1, y - 1, '▗▄▄▄▟█▙▄▄▄▖', '#B59A5B')
-      put(g, x + 3, y + 1, '▀█▀', '#7BC67E', ORANGE)
     },
   },
 } satisfies Record<string, Costume>)
