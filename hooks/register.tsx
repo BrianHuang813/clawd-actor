@@ -198,11 +198,11 @@ export const register: Register = on => {
     return (
       <Box flexDirection="column">
         {said.map(line => (
-          <Text color="white">{line}</Text>
+          <Text mono color="white">{line}</Text>
         ))}
         <Box flexDirection="column" height={H}>
           {rows.map(runs => (
-            <Text>
+            <Text mono>
               {runs.map(r => (r.color ? <Text color={r.color} backgroundColor={r.bg}>{r.text}</Text> : r.text))}
             </Text>
           ))}
