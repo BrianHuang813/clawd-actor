@@ -2,7 +2,8 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register } from 'claude-code'
 
 import { bubble, clean, holdFrames, parseClawd, persona, HELP } from './chat'
-import { ACT_FRAMES, FRAME_MS, frameRows, H, hold, type Mode, type Shown } from './scenes'
+import { ACT_FRAMES, FRAME_MS, frameGrid, frameRows, H, hold, type Mode, type Shown } from './scenes'
+import { gridToSvg } from './svg'
 
 const MAX_STAGE = 60 // widest the wander roams, however wide the terminal
 const frame = atom({ plugin: 'clawd-actor', key: 'frame' } as const, 0)
@@ -190,23 +191,29 @@ export const register: Register = on => {
     // keep whatever other band mods draw here, in the rows Clawd leaves them
     const below = await next({ ...e, props: { ...e.props, maxRows: e.props.maxRows - H - said.length } })
 
-    const { Box, Text } = $.ui.resolve(e)
+    const table = $.ui.resolve(e)
+    const { Box, Text } = table
     shown = hold(shown, turnBase, { word, mode, tick: t - turnBase, seed, played, tool: running[running.length - 1]?.tool })
     // a reaction counts its own frames, so a move like shift opens on its first one
-    const rows = reaction ? frameRows(word, mode, Math.max(0, t - reaction.from), width, reaction.scene) : frameRows(word, mode, t, width, shown.scene)
-
+    const at = reaction ? Math.max(0, t - reaction.from) : t
+    const scene = reaction ? reaction.scene : shown.scene
     return (
       <Box flexDirection="column">
         {said.map(line => (
           <Text mono color="white">{line}</Text>
         ))}
-        <Box flexDirection="column" height={H}>
-          {rows.map(runs => (
-            <Text mono>
-              {runs.map(r => (r.color ? <Text color={r.color} backgroundColor={r.bg}>{r.text}</Text> : r.text))}
-            </Text>
-          ))}
-        </Box>
+        {e.surface !== 'terminal' ? (
+          // Desktop, VS Code, mobile: text there is proportional with line gaps, so the stage is drawn as rects
+          <table.Svg source={gridToSvg(frameGrid(word, mode, at, width, scene))} alt="Clawd" />
+        ) : (
+          <Box flexDirection="column" height={H}>
+            {frameRows(word, mode, at, width, scene).map(runs => (
+              <Text>
+                {runs.map(r => (r.color ? <Text color={r.color} backgroundColor={r.bg}>{r.text}</Text> : r.text))}
+              </Text>
+            ))}
+          </Box>
+        )}
         {below}
       </Box>
     )

@@ -149,7 +149,7 @@ const LENS = PURPLE
 const JERSEY = '#3D7BD9'
 const PERM = '#8C62B0'
 // Which quarters of a cell each block fills: a (top left), b (top right), c (bottom left), d (bottom right)
-const QUARTERS: Record<string, string> = { '▘': 'a', '▝': 'b', '▖': 'c', '▗': 'd', '▀': 'ab', '▄': 'cd', '▌': 'ac', '▐': 'bd', '▛': 'abc', '▜': 'abd', '▙': 'acd', '▟': 'bcd', '█': 'abcd' }
+export const QUARTERS: Record<string, string> = { '▘': 'a', '▝': 'b', '▖': 'c', '▗': 'd', '▀': 'ab', '▄': 'cd', '▌': 'ac', '▐': 'bd', '▛': 'abc', '▜': 'abd', '▙': 'acd', '▟': 'bcd', '█': 'abcd' }
 
 /** A hat brim over the top half of each cell from x, keeping the bottom half as drawn, so the eyes peek out under it. */
 const brow = (g: Grid, x: number, y: number, n: number) => {
@@ -693,14 +693,19 @@ export const wander = (t: number, width: number) => {
   return { dx: 0, ...atEnd(p - 2 * span - PAUSE), dir: -1 }
 }
 
-/** One frame of the stage, as rows of same-colour runs; `dressed` false leaves the scene's costume off. */
-export const frameRows = (word: string, mode: Mode, t: number, width: number = W, scene?: string, dressed = true) => {
+/** One frame of the stage as its grid of cells; `dressed` false leaves the scene's costume off. */
+export const frameGrid = (word: string, mode: Mode, t: number, width: number = W, scene?: string, dressed = true): Grid => {
   const name = scene ?? sceneFor(word, mode)
   Object.assign(stride, WANDERS.has(name) ? wander(t, width) : STILL, { width })
   wearing = dressed ? COSTUMES[name] : undefined
   const g = blank(width)
   ;(scenes[name] ?? reactions[name] ?? scenes.idle)(g, t)
-  return g.map(row => {
+  return g
+}
+
+/** One frame of the stage, as rows of same-colour runs; `dressed` false leaves the scene's costume off. */
+export const frameRows = (word: string, mode: Mode, t: number, width: number = W, scene?: string, dressed = true) =>
+  frameGrid(word, mode, t, width, scene, dressed).map(row => {
     const runs: { text: string; color?: string; bg?: string }[] = []
     for (const c of row) {
       const last = runs[runs.length - 1]
@@ -709,7 +714,6 @@ export const frameRows = (word: string, mode: Mode, t: number, width: number = W
     }
     return runs
   })
-}
 
 export const SCENE_NAMES = Object.keys(scenes)
 
