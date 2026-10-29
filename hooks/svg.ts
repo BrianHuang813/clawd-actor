@@ -2,8 +2,8 @@
 // (Desktop, VS Code): block characters are drawn as rects, so rows tile whatever the font does.
 import { QUARTERS, type Grid } from './scenes'
 
-export const CELL_W = 6
-export const CELL_H = 12
+export const CELL_W = 4
+export const CELL_H = 8
 const FALLBACK = '#CCCCCC' // a glyph with no colour of its own
 const LOWER: Record<string, number> = { '▁': 1, '▂': 2, '▃': 3, '▅': 5, '▆': 6, '▇': 7 } // eighths filled from the bottom
 // where each quarter sits in a cell: [x, y] in halves
