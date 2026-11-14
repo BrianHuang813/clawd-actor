@@ -14,6 +14,10 @@ then puts on a show of 32 scenes, a new one every 15 seconds, with little Clawds
 
 *Three scenes at the real frame rate, about 16 s in all (a real turn changes scene every 15 s). Every frame is the mod's own output, rendered by `tools/`.*
 
+![New in 0.8: /clawd todo saves a todo for later; /clawd plan has Clawd suggest two at the chalkboard and /clawd plan ok takes them on; /clawd remind 30m standup; /clawd done ticks one off with a dance; /clawd list shows the day; then the Marathon badge unlocks and Clawd runs by in a red headband and a 42 race bib](assets/notebook.gif)
+
+*New in 0.8: the notebook and a badge, about 38 s. Clawd's suggestion here is an example; in a session Haiku picks it.*
+
 ## What it does
 
 - **Acts out the spinner word.** 32 scenes, matched by word stem, so *Flambéing* cooks and

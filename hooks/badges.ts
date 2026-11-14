@@ -1,7 +1,7 @@
 // Badges: what earns them, the counts kept toward them, and how /clawd badges words them.
 // Pure, like scenes.ts. The counts live in $.store, so they are the same in every project.
 
-import type { Lang } from './say'
+import type { Lang } from './say.ts'
 
 export type Stats = {
   hellos: number // /clawd commands of any kind

@@ -100,6 +100,8 @@ node tools/frames.ts > frames.json      # the frames, straight from hooks/scenes
 python tools/render.py frames.json assets/demo.gif
 node tools/chat-frames.ts > chat.json   # a mid-turn /clawd chat, with hooks/chat.ts's bubble
 python tools/render.py chat.json assets/chat.gif
+node tools/notebook-frames.ts > notebook.json   # the notebook and a badge, with hooks/say.ts's lines
+python tools/render.py notebook.json assets/notebook.gif
 ```
 
 `tools/render.py` uses DejaVu Sans Mono (and Droid Sans Fallback for 閃身步) and draws block

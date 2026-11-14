@@ -3,7 +3,7 @@
 // `## Notes`, `## Todo` and `## Reminders` lists under it, so a person (or Claude) can read it too.
 // A `# Inbox` heading at the top holds the todos for some day, not yet picked for one.
 
-import { say, type Lang } from './say'
+import { say, type Lang } from './say.ts'
 
 export const NOTES = 'Notes'
 export const TODO = 'Todo'

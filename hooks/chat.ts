@@ -2,7 +2,7 @@
 // Pure functions only, like scenes.ts.
 
 import { FRAME_MS } from './scenes.ts'
-import { parseNotes, type NoteAsk } from './notes'
+import { parseNotes, type NoteAsk } from './notes.ts'
 
 /** `/clawd <word>` actions: free and instant, no model call. Each names the scene it plays. */
 export const ACTIONS: Record<string, string> = { pet: 'pet', feed: 'feed', wave: 'wave', hi: 'wave', hello: 'wave', dance: 'disco', shift: 'shift', 閃身步: 'shift' }
