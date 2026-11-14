@@ -4,6 +4,12 @@ A Claude Code mod: while Claude works, **Clawd** walks onto a little stage above
 acts out what is going on — the spinner's `-ing` word (*Sautéing*, *Pondering*, *Herding*…) —
 then puts on a show of 32 scenes, a new one every 15 seconds, with little Clawds along for the ride.
 
+> **New in 0.8: Clawd keeps your notebook and hands out badges.** `/clawd note`, `todo`, `plan`
+> and `remind` jot thoughts, collect todos, suggest what to take on today and call out reminders
+> ([the notebook](#the-notebook)); eleven [badges](#badges) wait to be earned, and Marathon
+> already dresses Clawd as a runner. **Ten badges still need a costume:** draw one and send it in,
+> [here is how](CONTRIBUTING.md#dress-clawd-for-a-badge).
+
 ![Clawd as a detective in a fedora, magnifying glass in hand, pondering under a thought bubble; calling out 閃身步 and flash-stepping across the stage and back; and as a homemaker in a curly perm and apron, cooking at a pot that stays put](assets/demo.gif)
 
 *Three scenes at the real frame rate, about 16 s in all (a real turn changes scene every 15 s). Every frame is the mod's own output, rendered by `tools/`.*
