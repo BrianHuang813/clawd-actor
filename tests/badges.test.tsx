@@ -101,3 +101,23 @@ test("a subagent's turn is not counted", async ($, on) => {
   await clock.advance(10)
   expect(stored.stats).toBeUndefined()
 })
+
+test('earning Marathon shows the runner off: Clawd runs in its bib', async ($, on) => {
+  const { clock, ui, toasts } = await start($, on, { stats: { ...EMPTY, hellos: 1, longestTurnMin: 10 }, badges: { hello: 'x' } })
+  await $.command.run({ command: 'clawd', args: 'wave' } as any) // any count looks the badges over
+  await clock.advance(10)
+  expect(toasts).toEqual(['Clawd: Badge unlocked: ★ Marathon'])
+  await ui.redraw(BAND)
+  expect(await shown(ui)).toContain('42')
+})
+
+test('a badge earned in an earlier session dresses Clawd from the start', async ($, on) => {
+  // no count earns it now: the bib can only come from the badge stored before
+  const { clock, ui } = await start($, on, { stats: { ...EMPTY, hellos: 1 }, badges: { hello: 'x', marathon: 'x' } })
+  await clock.advance(10) // the perks load on a timer
+  await $.ui.mount({ plugin: 'clawd-actor', surface: 'terminal', component: 'Spinner', props: { message: 'Scampering', mode: 'requesting' } as any })
+  await $.turn.start({ text: 'go', turnId: 't1' } as any)
+  await clock.advance(300)
+  await ui.redraw({ ...BAND, isWorking: true })
+  expect(await shown(ui)).toContain('42')
+})

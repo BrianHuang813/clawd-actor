@@ -263,6 +263,26 @@ Object.assign(COSTUMES, {
 } satisfies Record<string, Costume>)
 export const DRESSED = Object.keys(COSTUMES)
 
+// ---- Rewards: a badge earned dresses Clawd in scenes that have no costume of their own ----
+
+// marathon runner: a red headband and a race bib with 42 on it, for the 42 kilometres
+const RUNNER: Costume = {
+  dress: (g, x, y) => {
+    put(g, x + 1, y - 1, '▗▄▄▄▄▄▖', '#E06C75')
+    put(g, x + 3, y + 1, '42', INK, 'white')
+  },
+}
+/** Badge id → the costume it earns and the scenes Clawd wears it in. */
+export const REWARDS: Record<string, { scenes: string[]; costume: Costume }> = {
+  marathon: { scenes: ['run', 'walk'], costume: RUNNER },
+}
+/** The scene a badge's reward shows off in, for the cheer as it is earned. */
+export const rewardScene = (badge: string) => REWARDS[badge]?.scenes[0]
+const NO_PERKS: ReadonlySet<string> = new Set()
+/** The costume `scene` wears: its own, else one a badge in `perks` earned for it. */
+const costumeFor = (scene: string, perks: ReadonlySet<string>) =>
+  COSTUMES[scene] ?? Object.entries(REWARDS).find(([id, r]) => perks.has(id) && r.scenes.includes(scene))?.[1].costume
+
 type Scene = (g: Grid, t: number) => void
 
 const GRAY = 'gray'
@@ -693,19 +713,22 @@ export const wander = (t: number, width: number) => {
   return { dx: 0, ...atEnd(p - 2 * span - PAUSE), dir: -1 }
 }
 
-/** One frame of the stage as its grid of cells; `dressed` false leaves the scene's costume off. */
-export const frameGrid = (word: string, mode: Mode, t: number, width: number = W, scene?: string, dressed = true): Grid => {
+/**
+ * One frame of the stage as its grid of cells; `dressed` false leaves the scene's costume off;
+ * `perks`, the badges earned, dress Clawd in their rewards.
+ */
+export const frameGrid = (word: string, mode: Mode, t: number, width: number = W, scene?: string, dressed = true, perks = NO_PERKS): Grid => {
   const name = scene ?? sceneFor(word, mode)
   Object.assign(stride, WANDERS.has(name) ? wander(t, width) : STILL, { width })
-  wearing = dressed ? COSTUMES[name] : undefined
+  wearing = dressed ? costumeFor(name, perks) : undefined
   const g = blank(width)
   ;(scenes[name] ?? reactions[name] ?? scenes.idle)(g, t)
   return g
 }
 
-/** One frame of the stage, as rows of same-colour runs; `dressed` false leaves the scene's costume off. */
-export const frameRows = (word: string, mode: Mode, t: number, width: number = W, scene?: string, dressed = true) =>
-  frameGrid(word, mode, t, width, scene, dressed).map(row => {
+/** One frame of the stage, as rows of same-colour runs; `dressed` and `perks` as for frameGrid. */
+export const frameRows = (word: string, mode: Mode, t: number, width: number = W, scene?: string, dressed = true, perks = NO_PERKS) =>
+  frameGrid(word, mode, t, width, scene, dressed, perks).map(row => {
     const runs: { text: string; color?: string; bg?: string }[] = []
     for (const c of row) {
       const last = runs[runs.length - 1]

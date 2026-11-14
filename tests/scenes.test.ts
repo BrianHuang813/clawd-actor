@@ -1,6 +1,6 @@
 import { test, expect } from 'claude-code/testing'
 import { cells } from '../hooks/chat'
-import { frameRows, SCENE_NAMES, REACTION_NAMES, WANDERS, DRESSED, H, sceneFor, sceneAt, sceneForTool, hold, ACT_FRAMES } from '../hooks/scenes'
+import { frameRows, SCENE_NAMES, REACTION_NAMES, WANDERS, DRESSED, REWARDS, rewardScene, H, sceneFor, sceneAt, sceneForTool, hold, ACT_FRAMES } from '../hooks/scenes'
 
 const PROBE: Record<string, string> = { think: 'Pondering', cook: 'Cooking', bake: 'Baking', brew: 'Brewing', walk: 'Moseying', run: 'Scampering',
   moonwalk: 'Moonwalking', herd: 'Herding', spin: 'Spinning', magic: 'Conjuring', levitate: 'Levitating', hatch: 'Hatching', grow: 'Sprouting',
@@ -141,4 +141,33 @@ test('shift calls out 閃身步 top to bottom behind Clawd, then dashes off leav
       expect(frame(start + 21).join('')).not.toMatch(/[▓▒░閃身步]/)
     }
   }
+})
+
+test("a badge's reward dresses Clawd only in its scenes, only once earned, and keeps its face and hat on stage", () => {
+  const text = (rows: { text: string }[][]) => rows.map(r => r.map(x => x.text).join(''))
+  const perks = new Set(Object.keys(REWARDS))
+  for (const [id, reward] of Object.entries(REWARDS)) {
+    expect(rewardScene(id)).toBe(reward.scenes[0])
+    for (const name of reward.scenes)
+      for (const width of [30, 40, 60]) {
+        let hops = 0
+        for (let t = 0; t < 120; t++) {
+          const plain = text(frameRows(PROBE[name], modeOf(name), t, width, name))
+          const dressed = text(frameRows(PROBE[name], modeOf(name), t, width, name, true, perks))
+          expect(dressed.join('\n')).not.toBe(plain.join('\n'))
+          for (const r of dressed) expect(cells(r)).toBe(width)
+          for (const r of dressed) for (const m of r.matchAll(/▐/g)) expect(r.slice(m.index, m.index + 7)).toMatch(/^▐[▛▜█^]{5}▌$/)
+          if (plain.findIndex(r => /▐[▛▜█^]{5}▌/.test(r)) === 1) {
+            hops++
+            expect(dressed[0].trim()).not.toBe('') // hopped into the top row, the headband with it
+          }
+        }
+        if (name === 'run') expect(hops).toBeGreaterThan(0)
+      }
+  }
+  // the runner's bib reads 42
+  expect(text(frameRows('Scampering', 'requesting', 3, 40, 'run', true, new Set(['marathon']))).join('')).toContain('42')
+  // a scene of its own costume, or one no reward is for, is the same with every perk
+  for (const name of ['think', 'cook', 'idle', 'campfire'])
+    for (let t = 0; t < 20; t++) expect(frameRows(PROBE[name], modeOf(name), t, 40, name, true, perks)).toEqual(frameRows(PROBE[name], modeOf(name), t, 40, name))
 })

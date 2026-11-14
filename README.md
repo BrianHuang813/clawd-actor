@@ -154,12 +154,13 @@ you on time while you code, they are not a calendar.
 | Finisher | tick off 50 todos |
 | Clean slate | finish all of a day's todos, 3 or more |
 | On time | set 10 reminders |
-| Marathon | a turn of 10 minutes |
+| Marathon | a turn of 10 minutes: Clawd runs and walks in a red headband and a 42 race bib from then on |
 | Busy bee | 50 turns in a day |
 | Regular | 7 days in a row |
 | Night owl | a turn between midnight and 4 a.m. |
 
-Earning one brings Clawd out under the disco ball with a toast. `/clawd badges` shows how many you
+Earning one brings Clawd out under the disco ball with a toast; a badge with a costume shows it
+off in its own scene instead. Costumes come one badge at a time: so far, Marathon's. `/clawd badges` shows how many you
 have and the closest one still to go, with its count. The counts are Clawd's own (kept in the
 mod's store, not the notebook) and the same in every project; only your own turns count, not a
 subagent's.

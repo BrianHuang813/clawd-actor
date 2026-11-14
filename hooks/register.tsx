@@ -5,7 +5,7 @@ import { bubble, clean, holdFrames, parseClawd, persona, HELP } from './chat'
 import { langOf, say, type Lang } from './say'
 import { cheer, earned, onTurn, readGot, readStats, shelf, type Stats } from './badges'
 import { addLines, candidates, dayKey, dueReminders, hhmm, items, minuteOf, pickPrompt, readPicks, resolveAt, summary, takeOn, tick as tickItem, INBOX, NOTES, PICK_SYSTEM, REMINDERS, TODO, WARN_MIN, type Candidate, type NoteAsk } from './notes'
-import { ACT_FRAMES, FRAME_MS, frameGrid, frameRows, H, hold, type Mode, type Shown } from './scenes'
+import { ACT_FRAMES, FRAME_MS, frameGrid, frameRows, H, hold, rewardScene, type Mode, type Shown } from './scenes'
 import { gridToSvg } from './svg'
 
 const MAX_STAGE = 60 // widest the wander roams, however wide the terminal
@@ -111,6 +111,7 @@ const edit = ($: Engine, change: (md: string) => string | undefined = () => unde
   return run
 }
 
+let perks: ReadonlySet<string> = new Set() // the badges earned, which dress Clawd in their rewards
 let counting: Promise<unknown> = Promise.resolve() // one count at a time, so none is lost to another
 /**
  * Moves the badge counts on by `change` and cheers any badge that earns, in the notebook's
@@ -123,6 +124,7 @@ const tally = ($: Engine, change: (s: Stats) => Stats) => {
     const got = readGot(await $.store.get('badges'))
     const fresh = earned(s, got)
     if (fresh.length) await $.store.set('badges', { ...got, ...Object.fromEntries(fresh.map(b => [b.id, s.day || 'yes'])) })
+    perks = new Set([...perks, ...fresh.map(b => b.id)])
     return fresh
   })
   counting = run.catch(() => undefined)
@@ -131,8 +133,18 @@ const tally = ($: Engine, change: (s: Stats) => Stats) => {
     if (!fresh.length) return
     const line = cheer(fresh, langOf(await edit($).catch(() => '')))
     $.ui.toast(`Clawd: ${line}`, { timeoutMs: 15_000 })
-    await react($, 'disco', line, holdFrames(line))
+    // a badge with a costume shows it off in its scene; any other, under the disco ball
+    await react($, fresh.map(b => rewardScene(b.id)).find(Boolean) ?? 'disco', line, holdFrames(line))
   })
+}
+
+/** Reads the badges earned from the store, for the costumes they bring; none when the store will not say. */
+const loadPerks = async ($: Engine) => {
+  try {
+    perks = new Set(Object.keys(readGot(await $.store.get('badges'))))
+  } catch {
+    // no store: Clawd goes without its rewards this session
+  }
 }
 
 /** What /clawd badges shows: the badges earned and the closest one to go. */
@@ -337,6 +349,7 @@ export const register: Register = on => {
     }
     $.clock.after(UPDATE_CHECK_MS, () => checkForUpdate($)) // on a timer: the session never waits on the network
     $.clock.every(REMIND_CHECK_MS, () => remind($))
+    $.clock.after(1, () => loadPerks($))
     $.clock.every(FRAME_MS, () => {
       const isReacting = reaction !== undefined
       if (reaction && --reaction.left <= 0) reaction = undefined
@@ -443,10 +456,10 @@ export const register: Register = on => {
         ))}
         {e.surface !== 'terminal' ? (
           // Desktop, VS Code, mobile: text there is proportional with line gaps, so the stage is drawn as rects
-          <table.Svg source={gridToSvg(frameGrid(word, mode, at, width, scene))} alt="Clawd" />
+          <table.Svg source={gridToSvg(frameGrid(word, mode, at, width, scene, true, perks))} alt="Clawd" />
         ) : (
           <Box flexDirection="column" height={H}>
-            {frameRows(word, mode, at, width, scene).map(runs => (
+            {frameRows(word, mode, at, width, scene, true, perks).map(runs => (
               <Text>
                 {runs.map(r => (r.color ? <Text color={r.color} backgroundColor={r.bg}>{r.text}</Text> : r.text))}
               </Text>
