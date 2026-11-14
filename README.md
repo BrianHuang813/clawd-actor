@@ -41,6 +41,9 @@ then puts on a show of 32 scenes, a new one every 15 seconds, with little Clawds
   shadow, after the official Clawd animation; on the move it looks where it is going.
 - **Talks back.** `/clawd` pets, feeds or waves at Clawd, or chats with it, even mid-turn (see
   below).
+- **Keeps your notebook.** `/clawd note`, `todo`, `plan`, `done` and `remind` jot thoughts,
+  todos for later, the day's plan (with suggestions from what is waiting) and today's reminders into a markdown file you (or Claude) can read; Clawd calls a
+  reminder out five minutes ahead and when it is due.
 - **Leaves when the turn ends**, and draws nothing while idle (the frame timer only redraws
   during a turn), unless you call it out with `/clawd`.
 
@@ -85,6 +88,58 @@ Haiku (one small `haiku` call per message, on your usage) and shows only in Claw
 not written to the transcript, so Claude's own conversation never sees it. Each message stands
 alone; Clawd does not remember earlier ones. Between turns Clawd steps out for the reaction and
 leaves again after it.
+
+### The notebook
+
+| Command | What it keeps |
+| --- | --- |
+| `/clawd note <text>` | a line under today's notes, with the time |
+| `/clawd todo <text>` | a todo for some day, into the inbox at the top of the file |
+| `/clawd plan a; b; c` | todos for today, added to the list |
+| `/clawd plan` | Clawd suggests up to three todos for today, from the inbox and what earlier days left open |
+| `/clawd plan ok [1 3]` | takes the suggestions on (all, or the ones numbered): onto today's list, ticked where they came from |
+| `/clawd done [n]` | ticks off todo `n`, or the next open one; Clawd dances, and all done brings out the disco ball |
+| `/clawd list` | today's todos, numbered, and the reminders still to come, in the bubble |
+| `/clawd remind 14:00 standup` (or `14：00`, `30m`, `45min`, `1h30m`, `30分`, `1小時30分`) | a reminder for later today |
+
+The commands are English; what you write can be any language. Clawd answers in Chinese when what
+it is about is Chinese (your text, or for `list`, `done` and `plan` the notebook), in English
+otherwise. The notebook's headings stay English either way.
+
+All of it goes to `~/.claude/clawd-notes.md`, a heading a day, so you can read and edit it yourself
+or ask Claude to plan your day from it:
+
+```markdown
+# Inbox
+
+## Todo
+- [ ] look into automating the restack
+- [x] reply to PM → 11-14
+
+# 2026-11-14
+
+## Notes
+- 10:32 ask PM about the field definitions
+
+## Todo
+- [x] write the tests
+- [ ] ship it
+- [ ] reply to PM
+
+## Reminders
+- [ ] 14:00 standup
+```
+
+`/clawd plan` with nothing after it asks Haiku (one small `haiku` call) to choose from the open
+todos, with today's reminders in view. Haiku answers only with their numbers, so every suggestion
+is a todo you wrote; when it does not answer, the oldest are offered. For a whole day laid out
+with times, ask Claude itself to plan it from the notebook.
+
+Clawd checks the reminders every 30 seconds: five minutes ahead it honks with the reminder in a
+bubble and a toast, and again when it is due, then ticks it off, so another open session does not
+call it twice. A turn now and then (at most every half hour) opens with the next open todo in
+Clawd's bubble. Reminders only work while Claude Code is open, and only show inside it: they keep
+you on time while you code, they are not a calendar.
 
 ### 閃身步 (shift)
 

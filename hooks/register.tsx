@@ -2,6 +2,8 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register } from 'claude-code'
 
 import { bubble, clean, holdFrames, parseClawd, persona, HELP } from './chat'
+import { langOf, say, type Lang } from './say'
+import { addLines, candidates, dayKey, dueReminders, hhmm, items, minuteOf, pickPrompt, readPicks, resolveAt, summary, takeOn, tick as tickItem, INBOX, NOTES, PICK_SYSTEM, REMINDERS, TODO, WARN_MIN, type Candidate, type NoteAsk } from './notes'
 import { ACT_FRAMES, FRAME_MS, frameGrid, frameRows, H, hold, type Mode, type Shown } from './scenes'
 import { gridToSvg } from './svg'
 
@@ -20,12 +22,15 @@ let seed = 0 // shuffles the session's rotation of scenes
 let played = 0 // rotation acts earlier turns got through
 let shown: Shown | undefined // the scene on stage, held for its act
 // What /clawd set going: a scene played over the show from frame `from`, and what Clawd says, for `left` more frames
-let reaction: { scene: string; say?: string; left: number; from: number } | undefined
+// (no scene: the show plays on under the bubble)
+let reaction: { scene?: string; say?: string; left: number; from: number } | undefined
 let asked = 0 // /clawd commands so far: a reply to any but the latest is dropped
 const running: { id: string; tool: string }[] = [] // tools in flight, newest last
 
 const REACT_FRAMES = Math.round(6000 / FRAME_MS) // how long a /clawd action plays
 const WAIT_FRAMES = Math.round(15_000 / FRAME_MS) // the most Clawd ponders before a reply
+const REMIND_CHECK_MS = 30_000 // how often the notebook is read for reminders due
+const NUDGE_MS = 30 * 60_000 // the least time between two "next up" bubbles at a turn's start
 const UPDATE_CHECK_MS = 2000 // after start-up settles, so the toast is seen
 const LATEST = 'https://raw.githubusercontent.com/BrianHuang813/clawd-actor/main/.claude-plugin/plugin.json'
 const RELEASES = 'https://github.com/BrianHuang813/clawd-actor/releases'
@@ -78,9 +83,181 @@ const keep = ($: Engine) => update($, show, () => ({ isTurnRunning, turnBase, se
 const tick = ($: Engine) => update($, frame, f => f + 1)
 
 /** Plays `scene` from its start over the show for `frames` frames, Clawd saying `say`; redraws at once, even between turns. */
-const react = async ($: Engine, scene: string, say?: string, frames = REACT_FRAMES) => {
+const react = async ($: Engine, scene: string | undefined, say?: string, frames = REACT_FRAMES) => {
   reaction = { scene, say, left: frames, from: (await read($, frame)) + 1 }
   return tick($)
+}
+
+/** The notebook: ~/.claude/clawd-notes.md. */
+const notesPath = async ($: Engine) => {
+  const home = (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE'))
+  if (!home) throw new Error('no HOME to keep it in')
+  return `${home}/.claude/clawd-notes.md`
+}
+
+let notebook: Promise<unknown> = Promise.resolve() // edits one at a time, so none is lost to another
+/** Reads the notebook, writes what `change` makes of it (undefined: leave it), and resolves the text it ends with. */
+const edit = ($: Engine, change: (md: string) => string | undefined = () => undefined): Promise<string> => {
+  const run = notebook.then(async () => {
+    const path = await notesPath($)
+    // only a missing file reads as empty: a read that fails must not be written over
+    const md = (await $.fs.exists(path)) ? String(await $.fs.read(path)) : ''
+    const next = change(md)
+    if (next !== undefined && next !== md) await $.fs.write(path, next)
+    return next ?? md
+  })
+  notebook = run.catch(() => undefined)
+  return run
+}
+
+let suggested: Candidate[] = [] // what the last /clawd plan offered, for /clawd plan ok
+
+/** Asks Haiku which of the open todos to take on today, and offers them in the bubble. */
+const suggest = async ($: Engine, now: Date, id: number, lang: Lang) => {
+  const day = dayKey(now)
+  const md = await edit($)
+  const cands = candidates(md, day)
+  if (!cands.length) {
+    suggested = []
+    return say(lang).nothingWaiting
+  }
+  const reminders = items(md, day, REMINDERS).filter(it => !it.isDone).map(it => it.text)
+  let answer = ''
+  try {
+    const prompt = pickPrompt(cands, day, hhmm(minuteOf(now)), reminders)
+    const r = await $.model.complete({ model: 'haiku', system: PICK_SYSTEM, prompt, maxTokens: 150, timeoutMs: 15_000 })
+    if (r.isAnswered) answer = r.text
+  } catch {
+    // the model would not answer: the oldest ones are picked instead
+  }
+  if (id !== asked) return undefined // a newer /clawd took the stage meanwhile
+  const { picks, why } = readPicks(answer, cands.length)
+  suggested = picks.map(i => cands[i]!)
+  return say(lang).offer(suggested.map((c, i) => `${i + 1}. ${c.text}`).join(' '), clean(why))
+}
+
+const USAGE = { note: 'usageNote', todo: 'usageTodo', plan: 'usagePlan', done: 'usageDone', remind: 'usageRemind' } as const
+
+/** The language Clawd answers a note command in: its text's, or the notebook's when it has none. */
+const langFor = async ($: Engine, ask: NoteAsk) => {
+  const text = ask.kind === 'plan' ? ask.items.join(' ') : 'text' in ask ? ask.text : ''
+  return langOf(text || (await edit($).catch(() => '')))
+}
+
+/** Does what a note command asks and says so in Clawd's bubble. */
+const keepNotes = async ($: Engine, ask: NoteAsk) => {
+  const id = ++asked // a chat reply still on its way no longer takes the bubble
+  const lang = await langFor($, ask)
+  const s = say(lang)
+  if (ask.kind === 'usage') return react($, 'wave', s[USAGE[ask.of]], holdFrames(s[USAGE[ask.of]]))
+  const now = new Date(await $.clock.now())
+  const day = dayKey(now)
+  let scene = 'sketch'
+  let line = ''
+  try {
+    const texts = ask.kind === 'plan' ? ask.items.map(clean) : 'text' in ask ? [clean(ask.text)] : []
+    if (texts.some(t => !t)) [scene, line] = ['wave', s.empty]
+    else if (ask.kind === 'note') {
+      await edit($, md => addLines(md, day, NOTES, [`- ${hhmm(minuteOf(now))} ${clean(ask.text)}`]))
+      line = s.noted
+    } else if (ask.kind === 'todo') {
+      await edit($, md => addLines(md, INBOX, TODO, [`- [ ] ${clean(ask.text)}`]))
+      line = s.savedLater
+    } else if (ask.kind === 'suggest') {
+      await react($, 'ponder', '· · ·', WAIT_FRAMES)
+      const offer = await suggest($, now, id, lang)
+      if (offer === undefined) return
+      ;[scene, line] = [suggested.length ? 'chalk' : 'wave', offer]
+    } else if (ask.kind === 'accept') {
+      const taken = ask.picks ? ask.picks.map(n => suggested[n - 1]).filter(c => c !== undefined) : suggested
+      if (!taken.length) [scene, line] = ['wave', suggested.length ? s.badPicks : s.askFirst]
+      else {
+        let count = 0
+        await edit($, md => {
+          const r = takeOn(md, day, taken)
+          count = r.count
+          return r.md
+        })
+        suggested = suggested.filter(c => !taken.includes(c))
+        ;[scene, line] = count ? ['chalk', s.taken(count)] : ['wave', s.takenAlready]
+      }
+    } else if (ask.kind === 'plan') {
+      await edit($, md => addLines(md, day, TODO, ask.items.map(i => `- [ ] ${clean(i)}`)))
+      ;[scene, line] = ['chalk', s.planned(ask.items.length)]
+    } else if (ask.kind === 'remind') {
+      const at = resolveAt(ask.when, now)
+      if (typeof at === 'string') [scene, line] = ['wave', at === 'notTime' || at === 'passed' ? s[at](ask.when) : s[at]]
+      else {
+        await edit($, md => addLines(md, day, REMINDERS, [`- [ ] ${hhmm(at)} ${clean(ask.text)}`]))
+        // set inside the warning window: just said, so only the call when due is left
+        if (at - minuteOf(now) <= WARN_MIN) warned.add(`${day} ${at} ${clean(ask.text)}`)
+        ;[scene, line] = ['type', s.remindSet(hhmm(at), clean(ask.text))]
+      }
+    } else if (ask.kind === 'done') {
+      await edit($, md => {
+        const todo = items(md, day, TODO)
+        const n = ask.n ? ask.n - 1 : todo.findIndex(t => !t.isDone)
+        if (!todo[n]) return void ([scene, line] = ['wave', ask.n ? s.noTodo(ask.n) : s.nothingLeft])
+        if (todo[n].isDone) return void ([scene, line] = ['wave', s.already(todo[n].text)])
+        const left = todo.filter(t => !t.isDone).length - 1
+        ;[scene, line] = left ? ['dance', s.doneLeft(todo[n].text, left)] : ['disco', s.allDone]
+        return tickItem(md, day, TODO, n)
+      })
+    } else [scene, line] = ['think', summary(await edit($), day, lang)]
+  } catch (err) {
+    ;[scene, line] = ['wave', s.noNotebook(err instanceof Error ? err.message : String(err))]
+  }
+  return react($, scene, line, holdFrames(line))
+}
+
+const warned = new Set<string>() // reminders called out ahead already
+/** Calls out the reminders coming up or due, ticking the due ones off so no session calls them twice. */
+const remind = async ($: Engine) => {
+  const now = new Date(await $.clock.now())
+  const day = dayKey(now)
+  const min = minuteOf(now)
+  const calls: string[] = []
+  try {
+    await edit($, md => {
+      let out = md
+      for (const due of dueReminders(md, day, min)) {
+        const key = `${day} ${due.at} ${due.text}`
+        const s = say(langOf(due.text))
+        if (due.isNow) {
+          out = tickItem(out, day, REMINDERS, due.n) ?? out
+          // one missed while Claude Code was closed says when it was
+          calls.push(min - due.at > 1 ? s.missed(hhmm(due.at), due.text) : s.now(due.text))
+        } else if (!warned.has(key)) {
+          warned.add(key)
+          calls.push(s.inMin(due.at - min, due.text))
+        }
+      }
+      return out
+    })
+  } catch {
+    return // no notebook to read: nothing to call out, the next check tries again
+  }
+  if (!calls.length) return
+  const call = calls.join(' · ')
+  $.ui.toast(`Clawd: ${call}`, { timeoutMs: 15_000 })
+  await react($, 'honk', call, holdFrames(call))
+}
+
+let nudgedAt = -Infinity
+/** At a turn's start, now and then, says the next open todo over the show. */
+const nudge = async ($: Engine) => {
+  const now = await $.clock.now()
+  if (now - nudgedAt < NUDGE_MS) return
+  nudgedAt = now // read the notebook at most every NUDGE_MS, todos or not
+  let md: string
+  try {
+    md = await edit($)
+  } catch {
+    return
+  }
+  const next = items(md, dayKey(new Date(now)), TODO).find(t => !t.isDone)
+  if (!next || reaction) return // nothing to do, or a /clawd reaction holds the stage
+  await react($, undefined, say(langOf(next.text)).nextUp(next.text))
 }
 
 /** What Claude is up to, for Clawd's system prompt. */
@@ -114,6 +291,7 @@ export const register: Register = on => {
       await keep($)
     }
     $.clock.after(UPDATE_CHECK_MS, () => checkForUpdate($)) // on a timer: the session never waits on the network
+    $.clock.every(REMIND_CHECK_MS, () => remind($))
     $.clock.every(FRAME_MS, () => {
       const isReacting = reaction !== undefined
       if (reaction && --reaction.left <= 0) reaction = undefined
@@ -121,7 +299,7 @@ export const register: Register = on => {
       return isTurnRunning || isReacting ? tick($) : undefined
     })
     // last, so the timers run whatever happens here; immediate: /clawd runs mid-turn instead of waiting
-    await $.command.register({ name: 'clawd', description: 'Pet, feed or wave at Clawd, or say something to it', argumentHint: '[pet|feed|wave|dance|shift|message]', immediate: true })
+    await $.command.register({ name: 'clawd', description: 'Pet, feed or wave at Clawd, or say something to it', argumentHint: '[pet|feed|wave|dance|shift|note|todo|plan|done|list|remind|message]', immediate: true })
     return r
   })
 
@@ -131,6 +309,7 @@ export const register: Register = on => {
     const ask = parseClawd(e.args)
     if ('help' in ask) await react($, 'wave', HELP)
     else if ('action' in ask) await react($, ask.action)
+    else if ('notes' in ask) $.clock.after(1, () => keepNotes($, ask.notes)) // on a timer: the prompt never waits on the file
     else {
       await react($, 'ponder', '· · ·', WAIT_FRAMES)
       const now = status()
@@ -144,6 +323,7 @@ export const register: Register = on => {
     turnBase = await read($, frame)
     running.length = 0
     await keep($)
+    $.clock.after(1, () => nudge($))
     return next(e)
   })
 
@@ -195,8 +375,8 @@ export const register: Register = on => {
     const { Box, Text } = table
     shown = hold(shown, turnBase, { word, mode, tick: t - turnBase, seed, played, tool: running[running.length - 1]?.tool })
     // a reaction counts its own frames, so a move like shift opens on its first one
-    const at = reaction ? Math.max(0, t - reaction.from) : t
-    const scene = reaction ? reaction.scene : shown.scene
+    const at = reaction?.scene ? Math.max(0, t - reaction.from) : t
+    const scene = reaction?.scene ?? shown.scene
     return (
       <Box flexDirection="column">
         {said.map(line => (
