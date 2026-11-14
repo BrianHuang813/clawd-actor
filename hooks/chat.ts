@@ -2,15 +2,15 @@
 // Pure functions only, like scenes.ts.
 
 import { FRAME_MS } from './scenes.ts'
-import { parseNotes, type NoteAsk } from './notes.ts'
+import { parseNotes, type NoteAsk } from './notes'
 
 /** `/clawd <word>` actions: free and instant, no model call. Each names the scene it plays. */
 export const ACTIONS: Record<string, string> = { pet: 'pet', feed: 'feed', wave: 'wave', hi: 'wave', hello: 'wave', dance: 'disco', shift: 'shift', 閃身步: 'shift' }
-export const HELP = 'Try /clawd pet, feed, wave, dance or shift; note, todo, plan, done, list or remind 14:00 standup; or just say something to me!'
+export const HELP = 'Try /clawd pet, feed, wave, dance or shift; note, todo, plan, done, list or remind 14:00 standup; badges; or just say something to me!'
 const MAX_ASK = 500 // characters of a message passed on to the model
 const MAX_LINES = 3 // of text in the bubble
 
-export type Ask = { help: true } | { action: string } | { notes: NoteAsk } | { chat: string }
+export type Ask = { help: true } | { action: string } | { badges: true } | { notes: NoteAsk } | { chat: string }
 
 /** A lone action word plays that action; a note command (note, todo, plan, done, list, remind) keeps the notebook; anything else is a chat message. */
 export const parseClawd = (args: string): Ask => {
@@ -19,6 +19,7 @@ export const parseClawd = (args: string): Ask => {
   const word = text.toLowerCase()
   const action = Object.hasOwn(ACTIONS, word) ? ACTIONS[word] : undefined // not what every object inherits
   if (action) return { action }
+  if (word === 'badges' || word === 'badge') return { badges: true }
   const notes = parseNotes(text)
   return notes ? { notes } : { chat: text.slice(0, MAX_ASK) }
 }

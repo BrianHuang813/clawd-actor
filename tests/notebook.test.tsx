@@ -65,18 +65,18 @@ test('what the person wrote in the notebook stays put', async ($, on) => {
 
 test('a reminder is called out 5 minutes ahead and when due, then ticked off', async ($, on) => {
   const { clock, ui, toasts, files } = await start($, on)
-  await clawd($, clock, 'remind 10:10 standup')
-  expect(files[PATH]).toContain('- [ ] 10:10 standup')
-  await clock.advance(4.5 * 60_000) // 10:04:30
+  await clawd($, clock, 'remind 10:06 standup') // close by: the mock clock runs every frame between
+  expect(files[PATH]).toContain('- [ ] 10:06 standup')
+  await clock.advance(30_000) // 10:00:30, six minutes ahead
   expect(toasts).toEqual([])
-  await clock.advance(35_000) // 10:05:05, just after the check at 10:05
+  await clock.advance(35_000) // 10:01:05, just after the check at 10:01
   expect(toasts).toEqual(['Clawd: In 5 min: standup'])
   await ui.redraw(BAND)
   expect(await shown(ui)).toContain('In 5 min: standup')
-  await clock.set(TEN + 10 * 60_000 + 1000) // 10:10:01
+  await clock.set(TEN + 6 * 60_000 + 1000) // 10:06:01
   expect(toasts.at(-1)).toBe('Clawd: Now: standup')
-  expect(files[PATH]).toContain('- [x] 10:10 standup')
-  await clock.advance(5 * 60_000)
+  expect(files[PATH]).toContain('- [x] 10:06 standup')
+  await clock.advance(60_000)
   expect(toasts.length).toBe(2) // once ahead, once due
 })
 

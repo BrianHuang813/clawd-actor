@@ -3,6 +3,7 @@ import type { EngineInterface as Engine, Register } from 'claude-code'
 
 import { bubble, clean, holdFrames, parseClawd, persona, HELP } from './chat'
 import { langOf, say, type Lang } from './say'
+import { cheer, earned, onTurn, readGot, readStats, shelf, type Stats } from './badges'
 import { addLines, candidates, dayKey, dueReminders, hhmm, items, minuteOf, pickPrompt, readPicks, resolveAt, summary, takeOn, tick as tickItem, INBOX, NOTES, PICK_SYSTEM, REMINDERS, TODO, WARN_MIN, type Candidate, type NoteAsk } from './notes'
 import { ACT_FRAMES, FRAME_MS, frameGrid, frameRows, H, hold, type Mode, type Shown } from './scenes'
 import { gridToSvg } from './svg'
@@ -110,6 +111,44 @@ const edit = ($: Engine, change: (md: string) => string | undefined = () => unde
   return run
 }
 
+let counting: Promise<unknown> = Promise.resolve() // one count at a time, so none is lost to another
+/**
+ * Moves the badge counts on by `change` and cheers any badge that earns, in the notebook's
+ * language; never awaited by the caller, and a store that fails only misses the count.
+ */
+const tally = ($: Engine, change: (s: Stats) => Stats) => {
+  const run = counting.then(async () => {
+    const s = change(readStats(await $.store.get('stats')))
+    await $.store.set('stats', s)
+    const got = readGot(await $.store.get('badges'))
+    const fresh = earned(s, got)
+    if (fresh.length) await $.store.set('badges', { ...got, ...Object.fromEntries(fresh.map(b => [b.id, s.day || 'yes'])) })
+    return fresh
+  })
+  counting = run.catch(() => undefined)
+  $.clock.after(1, async () => {
+    const fresh = await run.catch(() => [])
+    if (!fresh.length) return
+    const line = cheer(fresh, langOf(await edit($).catch(() => '')))
+    $.ui.toast(`Clawd: ${line}`, { timeoutMs: 15_000 })
+    await react($, 'disco', line, holdFrames(line))
+  })
+}
+
+/** What /clawd badges shows: the badges earned and the closest one to go. */
+const showBadges = async ($: Engine) => {
+  const lang = langOf(await edit($).catch(() => ''))
+  let line: string
+  try {
+    line = shelf(readStats(await $.store.get('stats')), readGot(await $.store.get('badges')), lang)
+  } catch {
+    line = lang === 'zh' ? '徽章櫃打不開，等等再試。' : 'My badge shelf is stuck. Try again soon?'
+  }
+  await react($, 'juggle', line, holdFrames(line))
+}
+
+let turnStartedAt = 0 // for the marathon badge: lost on a reload, so a reloaded turn does not count
+
 let suggested: Candidate[] = [] // what the last /clawd plan offered, for /clawd plan ok
 
 /** Asks Haiku which of the open todos to take on today, and offers them in the bubble. */
@@ -160,6 +199,7 @@ const keepNotes = async ($: Engine, ask: NoteAsk) => {
     else if (ask.kind === 'note') {
       await edit($, md => addLines(md, day, NOTES, [`- ${hhmm(minuteOf(now))} ${clean(ask.text)}`]))
       line = s.noted
+      tally($, st => ({ ...st, notes: st.notes + 1 }))
     } else if (ask.kind === 'todo') {
       await edit($, md => addLines(md, INBOX, TODO, [`- [ ] ${clean(ask.text)}`]))
       line = s.savedLater
@@ -191,9 +231,11 @@ const keepNotes = async ($: Engine, ask: NoteAsk) => {
         await edit($, md => addLines(md, day, REMINDERS, [`- [ ] ${hhmm(at)} ${clean(ask.text)}`]))
         // set inside the warning window: just said, so only the call when due is left
         if (at - minuteOf(now) <= WARN_MIN) warned.add(`${day} ${at} ${clean(ask.text)}`)
+        tally($, st => ({ ...st, reminders: st.reminders + 1 }))
         ;[scene, line] = ['type', s.remindSet(hhmm(at), clean(ask.text))]
       }
     } else if (ask.kind === 'done') {
+      let [isTicked, isCleared] = [false, false]
       await edit($, md => {
         const todo = items(md, day, TODO)
         const n = ask.n ? ask.n - 1 : todo.findIndex(t => !t.isDone)
@@ -201,8 +243,11 @@ const keepNotes = async ($: Engine, ask: NoteAsk) => {
         if (todo[n].isDone) return void ([scene, line] = ['wave', s.already(todo[n].text)])
         const left = todo.filter(t => !t.isDone).length - 1
         ;[scene, line] = left ? ['dance', s.doneLeft(todo[n].text, left)] : ['disco', s.allDone]
+        isCleared = !left && todo.length >= 3
+        isTicked = true
         return tickItem(md, day, TODO, n)
       })
+      if (isTicked) tally($, st => ({ ...st, todosDone: st.todosDone + 1, clearDays: st.clearDays + (isCleared ? 1 : 0) }))
     } else [scene, line] = ['think', summary(await edit($), day, lang)]
   } catch (err) {
     ;[scene, line] = ['wave', s.noNotebook(err instanceof Error ? err.message : String(err))]
@@ -307,7 +352,10 @@ export const register: Register = on => {
   on('command.run', { command: 'clawd' }, async ($, e) => {
     const id = ++asked
     const ask = parseClawd(e.args)
+    const action = 'action' in ask ? ask.action : ''
+    tally($, s => ({ ...s, hellos: s.hellos + 1, pets: s.pets + (action === 'pet' ? 1 : 0), feeds: s.feeds + (action === 'feed' ? 1 : 0) }))
     if ('help' in ask) await react($, 'wave', HELP)
+    else if ('badges' in ask) $.clock.after(1, () => showBadges($))
     else if ('action' in ask) await react($, ask.action)
     else if ('notes' in ask) $.clock.after(1, () => keepNotes($, ask.notes)) // on a timer: the prompt never waits on the file
     else {
@@ -324,6 +372,12 @@ export const register: Register = on => {
     running.length = 0
     await keep($)
     $.clock.after(1, () => nudge($))
+    if (!e.agentId) {
+      // the main loop's turns only: a subagent's would count one job many times
+      const now = await $.clock.now()
+      turnStartedAt = now
+      tally($, s => onTurn(s, dayKey(new Date(now)), new Date(now).getHours()))
+    }
     return next(e)
   })
 
@@ -342,6 +396,11 @@ export const register: Register = on => {
     if (e.agentId) return next(e) // a subagent's turn (a workflow's agents too): the main turn runs on
     isTurnRunning = false
     played += Math.floor(((await read($, frame)) - turnBase) / ACT_FRAMES) // acts after the opener
+    if (turnStartedAt) {
+      const minutes = Math.floor(((await $.clock.now()) - turnStartedAt) / 60_000)
+      turnStartedAt = 0
+      tally($, s => ({ ...s, longestTurnMin: Math.max(s.longestTurnMin, minutes) }))
+    }
     await keep($)
     return next(e)
   })

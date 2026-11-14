@@ -44,6 +44,8 @@ then puts on a show of 32 scenes, a new one every 15 seconds, with little Clawds
 - **Keeps your notebook.** `/clawd note`, `todo`, `plan`, `done` and `remind` jot thoughts,
   todos for later, the day's plan (with suggestions from what is waiting) and today's reminders into a markdown file you (or Claude) can read; Clawd calls a
   reminder out five minutes ahead and when it is due.
+- **Hands out badges.** Eleven to collect, from saying hello to a ten-minute turn or a week in a
+  row; Clawd cheers each one as you earn it, and `/clawd badges` shows the shelf.
 - **Leaves when the turn ends**, and draws nothing while idle (the frame timer only redraws
   during a turn), unless you call it out with `/clawd`.
 
@@ -140,6 +142,27 @@ bubble and a toast, and again when it is due, then ticks it off, so another open
 call it twice. A turn now and then (at most every half hour) opens with the next open todo in
 Clawd's bubble. Reminders only work while Claude Code is open, and only show inside it: they keep
 you on time while you code, they are not a calendar.
+
+### Badges
+
+| Badge | How |
+| --- | --- |
+| Hello there | say anything to Clawd |
+| Best friends | pet Clawd 100 times |
+| Cookie monster | feed Clawd 50 cookies |
+| Scribe | write 20 notes |
+| Finisher | tick off 50 todos |
+| Clean slate | finish all of a day's todos, 3 or more |
+| On time | set 10 reminders |
+| Marathon | a turn of 10 minutes |
+| Busy bee | 50 turns in a day |
+| Regular | 7 days in a row |
+| Night owl | a turn between midnight and 4 a.m. |
+
+Earning one brings Clawd out under the disco ball with a toast. `/clawd badges` shows how many you
+have and the closest one still to go, with its count. The counts are Clawd's own (kept in the
+mod's store, not the notebook) and the same in every project; only your own turns count, not a
+subagent's.
 
 ### 閃身步 (shift)
 
