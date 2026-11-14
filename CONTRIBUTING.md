@@ -32,6 +32,47 @@ helps with anything drawn wrong.
 stems in `VERBS`, and add a word that picks it to `PROBE` in `tests/scenes.test.ts`. The tests then
 check it on its own.
 
+## Dress Clawd for a badge
+
+Every badge can earn Clawd a costume, and most still have none: this is the easiest way in, and
+each one is a small pull request of its own. Marathon's runner's kit is the example to follow.
+
+| Badge (id) | How it is earned | Costume |
+| --- | --- | --- |
+| `marathon` | a turn of 10 minutes | a red headband and a 42 race bib, in `run` and `walk` |
+| `hello` | say anything to Clawd | up for grabs |
+| `petLover` | pet Clawd 100 times | up for grabs |
+| `foodie` | feed Clawd 50 cookies | up for grabs |
+| `scribe` | write 20 notes | up for grabs |
+| `finisher` | tick off 50 todos | up for grabs |
+| `cleanSlate` | finish all of a day's todos | up for grabs |
+| `onTime` | set 10 reminders | up for grabs |
+| `busyBee` | 50 turns in a day | up for grabs |
+| `regular` | 7 days in a row | up for grabs |
+| `nightOwl` | a turn between midnight and 4 a.m. | up for grabs |
+
+To claim one, open an issue saying which badge and what Clawd wears, so two people do not draw the
+same one. Then:
+
+1. **Pick the scenes** it is worn in. They must be scenes without a costume of their own (`DRESSED`
+   in `hooks/scenes.ts` lists those that have one), and should suit it: a nightcap in `idle`, say.
+   A scene can carry one reward only, so check `REWARDS` for scenes already taken.
+2. **Draw it** as a `Costume` next to `RUNNER` in `hooks/scenes.ts`. `dress(g, x, y)` gets Clawd's
+   left column `x` and head row `y`: the row above (`y - 1`) is for hats, `y + 1` is the body with
+   the arms at its ends, and `y + 2` the legs. `put(g, x, y, text, color, bg)` paints, spaces left
+   transparent. Keep to the five face cells' edges (`x + 1` to `x + 7` on the head row): the tests
+   fail on anything drawn over the face. Use colours that show on dark and light terminals alike
+   (charcoal `#3A3A42` rather than black).
+3. **Give it to the badge**: one line in `REWARDS`, `<badge id>: { scenes: [...], costume: ... }`.
+   The first scene listed is where Clawd shows it off as the badge is earned.
+4. **Look at it** without starting Claude Code: `node tools/peek.ts <scene> <badge id> 8` prints
+   frames as drawn and with the costume on, side by side (shapes only, no colours).
+5. **Check it**: `claude plugin test .` checks every reward on its own, at three stage widths: that
+   it shows only in its scenes and only once earned, keeps the stage size and Clawd's face, and that
+   a hat stays on stage when Clawd hops. Add a row to the table above and to the badge table in
+   `README.md`, and attach a few frames from `tools/peek.ts` (or a screenshot, for the colours) to
+   the pull request.
+
 ## What the tests check
 
 That every scene keeps the stage size at 30, 40 and 60 columns and moves Clawd about only in the

@@ -167,7 +167,10 @@ test("a badge's reward dresses Clawd only in its scenes, only once earned, and k
   }
   // the runner's bib reads 42
   expect(text(frameRows('Scampering', 'requesting', 3, 40, 'run', true, new Set(['marathon']))).join('')).toContain('42')
-  // a scene of its own costume, or one no reward is for, is the same with every perk
-  for (const name of ['think', 'cook', 'idle', 'campfire'])
-    for (let t = 0; t < 20; t++) expect(frameRows(PROBE[name], modeOf(name), t, 40, name, true, perks)).toEqual(frameRows(PROBE[name], modeOf(name), t, 40, name))
+  // every other scene is the same with every perk; a reward never goes on a scene with a costume, nor shares one
+  const rewarded = Object.values(REWARDS).flatMap(r => r.scenes)
+  expect(new Set(rewarded).size).toBe(rewarded.length)
+  for (const name of rewarded) expect(DRESSED).not.toContain(name)
+  for (const name of SCENE_NAMES.filter(n => !rewarded.includes(n)))
+    for (let t = 0; t < 10; t++) expect(frameRows(PROBE[name], modeOf(name), t, 40, name, true, perks)).toEqual(frameRows(PROBE[name], modeOf(name), t, 40, name))
 })
