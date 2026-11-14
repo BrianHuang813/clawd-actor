@@ -37,10 +37,10 @@ const EN = {
   missed: (at: string, text: string) => `Missed at ${at}: ${text}`,
   inMin: (n: number, text: string) => `In ${n} min: ${text}`,
   nextUp: (text: string) => `Next up: ${text}`,
-  todo: (list: string) => `Todo: ${list}`,
+  today: (list: string) => `Today: ${list}`,
   noTodos: 'No todos today.',
   later: (list: string) => `Later: ${list}`,
-  inbox: (n: number) => `Inbox: ${n} (/clawd plan to pick)`,
+  todos: (list: string) => `Todo: ${list} (/clawd plan to pick)`,
 }
 
 const ZH: typeof EN = {
@@ -54,7 +54,7 @@ const ZH: typeof EN = {
   rightNow: '那就是現在！',
   todayOnly: '我只記今天的提醒。',
   noted: '記好了！',
-  savedLater: '先收進收件匣了，/clawd plan 會從裡面挑。',
+  savedLater: '存進待辦了，/clawd plan 會從裡面挑。',
   planned: n => `今天的清單多了 ${n} 項，/clawd list 可以看。`,
   remindSet: (at, text) => `${at} 會提醒你：${text}`,
   empty: '內容是空的，再試一次？',
@@ -74,10 +74,10 @@ const ZH: typeof EN = {
   missed: (at, text) => `錯過了 ${at}：${text}`,
   inMin: (n, text) => `${n} 分鐘後：${text}`,
   nextUp: text => `下一件：${text}`,
-  todo: list => `待辦：${list}`,
+  today: list => `今天：${list}`,
   noTodos: '今天還沒有待辦。',
   later: list => `稍後：${list}`,
-  inbox: n => `收件匣：${n} 項（/clawd plan 來挑）`,
+  todos: list => `待辦：${list}（/clawd plan 來挑）`,
 }
 
 /** Clawd's lines in `lang`. */

@@ -1,6 +1,6 @@
 {
   "name": "clawd-actor",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "While Claude works, Clawd acts out the spinner's -ing word above the prompt, and the tool that is running; it also keeps your notes, todos and reminders, and hands out badges",
   "author": { "name": "Brian Huang" },
   "homepage": "https://github.com/BrianHuang813/clawd-actor",

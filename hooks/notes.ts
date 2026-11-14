@@ -173,13 +173,13 @@ export const dueReminders = (md: string, day: string, nowMin: number): Due[] =>
     return at - nowMin <= WARN_MIN ? [{ n, at, text, isNow: false }] : []
   })
 
-/** What /clawd list says: today's todos, numbered and ticked, the reminders still to come, and what the inbox holds. */
+/** What /clawd list says: today's todos, numbered and ticked, the reminders still to come, and the todos waiting in the inbox. */
 export const summary = (md: string, day: string, lang: Lang): string => {
   const s = say(lang)
   const todo = items(md, day, TODO).map((it, i) => `${i + 1}.${it.isDone ? '✓' : ''} ${it.text}`)
   const later = items(md, day, REMINDERS).filter(it => !it.isDone).map(it => it.text)
-  const inbox = items(md, INBOX, TODO).filter(it => !it.isDone).length
-  const parts = [todo.length ? s.todo(todo.join(', ')) : s.noTodos, later.length ? s.later(later.join(', ')) : '', inbox ? s.inbox(inbox) : '']
+  const inbox = items(md, INBOX, TODO).filter(it => !it.isDone).map(it => it.text)
+  const parts = [todo.length ? s.today(todo.join(', ')) : s.noTodos, later.length ? s.later(later.join(', ')) : '', inbox.length ? s.todos(inbox.join(', ')) : '']
   return parts.filter(Boolean).join(' · ')
 }
 

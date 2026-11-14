@@ -87,7 +87,7 @@ test('reminders are called out 5 minutes ahead, then when due, until ticked', ()
 
 test('the summary numbers todos and lists what is still to come', () => {
   const md = addLines(addLines('', DAY, TODO, ['- [x] a', '- [ ] b']), DAY, REMINDERS, ['- [ ] 14:00 standup'])
-  expect(summary(md, DAY, 'en')).toBe('Todo: 1.✓ a, 2. b · Later: 14:00 standup')
+  expect(summary(md, DAY, 'en')).toBe('Today: 1.✓ a, 2. b · Later: 14:00 standup')
   expect(summary('', DAY, 'en')).toBe('No todos today.')
 })
 
@@ -97,7 +97,7 @@ test('the inbox sits at the top; candidates are days past, oldest first, then th
   md = addLines(md, DAY, TODO, ['- [ ] today'])
   expect(md.startsWith(`# ${INBOX}\n\n## ${TODO}\n- [ ] someday\n\n# 2026-11-13`)).toBe(true)
   expect(candidates(md, DAY)).toEqual([{ from: '2026-11-13', text: 'left over' }, { from: INBOX, text: 'someday' }])
-  expect(summary(md, DAY, 'en')).toContain('Inbox: 1')
+  expect(summary(md, DAY, 'en')).toBe('Today: 1. today · Todo: someday (/clawd plan to pick)')
 })
 
 test("Haiku's picks are read safely, and the oldest stand in when they do not hold", () => {
@@ -124,5 +124,5 @@ test('Clawd answers in Chinese when what it is about is Chinese', () => {
   expect(langOf('交报告')).toBe('zh')
   expect(langOf('ask PM')).toBe('en')
   const md = addLines('', DAY, TODO, ['- [ ] 寫測試'])
-  expect(summary(md, DAY, 'zh')).toBe('待辦：1. 寫測試')
+  expect(summary(md, DAY, 'zh')).toBe('今天：1. 寫測試')
 })
