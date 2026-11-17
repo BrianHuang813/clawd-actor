@@ -5,7 +5,7 @@ import { bubble, clean, holdFrames, parseClawd, persona, HELP } from './chat'
 import { langOf, say, type Lang } from './say'
 import { cheer, earned, onTurn, readGot, readStats, shelf, type Stats } from './badges'
 import { addLines, candidates, dayKey, dueReminders, hhmm, items, minuteOf, pickPrompt, readPicks, resolveAt, summary, takeOn, tick as tickItem, INBOX, NOTES, PICK_SYSTEM, REMINDERS, TODO, WARN_MIN, type Candidate, type NoteAsk } from './notes'
-import { ACT_FRAMES, FRAME_MS, frameGrid, frameRows, H, hold, rewardScene, type Mode, type Shown } from './scenes'
+import { ACT_FRAMES, FRAME_MS, frameGrid, frameRows, H, hold, rewardScene, SIXSEVEN_FRAMES, type Mode, type Shown } from './scenes'
 import { gridToSvg } from './svg'
 
 const MAX_STAGE = 60 // widest the wander roams, however wide the terminal
@@ -369,7 +369,7 @@ export const register: Register = on => {
     tally($, s => ({ ...s, hellos: s.hellos + 1, pets: s.pets + (action === 'pet' ? 1 : 0), feeds: s.feeds + (action === 'feed' ? 1 : 0) }))
     if ('help' in ask) await react($, 'wave', HELP)
     else if ('badges' in ask) $.clock.after(1, () => showBadges($))
-    else if ('action' in ask) await react($, ask.action)
+    else if ('action' in ask) await react($, ask.action, undefined, ask.action === 'sixseven' ? SIXSEVEN_FRAMES : undefined) // 67 runs through all its gears
     else if ('notes' in ask) $.clock.after(1, () => keepNotes($, ask.notes)) // on a timer: the prompt never waits on the file
     else {
       await react($, 'ponder', '· · ·', WAIT_FRAMES)

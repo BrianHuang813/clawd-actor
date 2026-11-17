@@ -5,8 +5,8 @@ import { FRAME_MS } from './scenes.ts'
 import { parseNotes, type NoteAsk } from './notes.ts'
 
 /** `/clawd <word>` actions: free and instant, no model call. Each names the scene it plays. */
-export const ACTIONS: Record<string, string> = { pet: 'pet', feed: 'feed', wave: 'wave', hi: 'wave', hello: 'wave', dance: 'disco', shift: 'shift', 閃身步: 'shift' }
-export const HELP = 'Try /clawd pet, feed, wave, dance or shift; note, todo, plan, done, list or remind 14:00 standup; badges; or just say something to me!'
+export const ACTIONS: Record<string, string> = { pet: 'pet', feed: 'feed', wave: 'wave', hi: 'wave', hello: 'wave', dance: 'disco', shift: 'shift', 閃身步: 'shift', '67': 'sixseven', sixseven: 'sixseven' }
+export const HELP = 'Try /clawd pet, feed, wave, dance, shift or 67; note, todo, plan, done, list or remind 14:00 standup; badges; or just say something to me!'
 const MAX_ASK = 500 // characters of a message passed on to the model
 const MAX_LINES = 3 // of text in the bubble
 

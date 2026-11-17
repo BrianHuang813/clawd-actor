@@ -65,6 +65,7 @@ there). `claude -p` and cloud sessions draw no mod interface, so Clawd does not 
 | sketch / weather / thunder | Sketching, Doodling / Misting, Billowing / Thundering |
 | dig / flow | Burrowing, Spelunking / Flowing, Undulating |
 | shift | Beaming, Shifting, Dodging |
+| sixseven | Seesawing, Teetering, Weighing |
 | kick / skate / campfire | no built-in word yet; they turn up in the rotation |
 
 Tools: `Bash` types, `Read`/`Grep`/`Glob` think, `Edit`/`Write` sketch, `Agent` herds sheep,
@@ -102,6 +103,7 @@ terminal font that draws CJK characters two columns wide, as nearly all do.
 | `/clawd wave` (or `hi`, `hello`) | waves back |
 | `/clawd dance` | dances under the disco ball |
 | `/clawd shift` (or `閃身步`) | flash-steps across the stage |
+| `/clawd 67` (or `sixseven`) | weighs it out, 6 in the raised left hand, 7 in the right |
 | `/clawd <anything else>` | answers in a speech bubble |
 
 A chat is one small Haiku call on your usage. The answer shows only in Clawd's bubble, in your

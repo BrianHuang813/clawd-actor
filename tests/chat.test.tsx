@@ -10,6 +10,7 @@ test('a lone action word acts, anything else chats, nothing at all asks for help
   expect(parseClawd('hi')).toEqual({ action: 'wave' })
   expect(parseClawd('Shift')).toEqual({ action: 'shift' })
   expect(parseClawd('閃身步')).toEqual({ action: 'shift' })
+  expect(parseClawd('67')).toEqual({ action: 'sixseven' })
   expect(parseClawd('hi there')).toEqual({ chat: 'hi there' })
   expect(parseClawd('   ')).toEqual({ help: true })
   // only the listed words act, not what every object inherits
