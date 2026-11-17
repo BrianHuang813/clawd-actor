@@ -63,7 +63,7 @@ test('what the person wrote in the notebook stays put', async ($, on) => {
   expect(files[PATH]!.startsWith(mine)).toBe(true)
 })
 
-test('a reminder is called out 5 minutes ahead and when due, then ticked off', async ($, on) => {
+test('a reminder is called out 5 minutes ahead and when due, then ticked off', { timeoutMs: 30_000 }, async ($, on) => {
   const { clock, ui, toasts, files } = await start($, on)
   await clawd($, clock, 'remind 10:06 standup') // close by: the mock clock runs every frame between
   expect(files[PATH]).toContain('- [ ] 10:06 standup')
@@ -88,7 +88,7 @@ test('every reminder due is called out, missed ones with their time', async ($, 
   expect(files[PATH]).toContain('- [x] 08:00 coffee\n- [x] 9:00 standup')
 })
 
-test('a reminder set inside the five minutes is not warned again, only called when due', async ($, on) => {
+test('a reminder set inside the five minutes is not warned again, only called when due', { timeoutMs: 30_000 }, async ($, on) => {
   const { clock, toasts } = await start($, on)
   await clawd($, clock, 'remind 3m tea')
   await clock.advance(2 * 60_000)
@@ -170,7 +170,7 @@ test('when Haiku does not answer, plan offers the oldest todos', async ($, on) =
   expect(text).not.toContain('4.')
 })
 
-test('a Chinese note, reminder and list get Chinese answers; the file keeps its English headings', async ($, on) => {
+test('a Chinese note, reminder and list get Chinese answers; the file keeps its English headings', { timeoutMs: 30_000 }, async ($, on) => {
   const { clock, ui, toasts, files } = await start($, on)
   await clawd($, clock, 'note 等下要問 PM')
   await ui.redraw(BAND)

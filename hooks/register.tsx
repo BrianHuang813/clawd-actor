@@ -443,8 +443,8 @@ export const register: Register = on => {
     // the bubble needs its two border rows besides the text: left out when the band has no room for one line
     const room = Math.min(3, e.props.maxRows - H - 2)
     const said = reaction?.say && room > 0 ? bubble(reaction.say, width, room) : []
-    // keep whatever other band mods draw here, in the rows Clawd leaves them
-    const below = await next({ ...e, props: { ...e.props, maxRows: e.props.maxRows - H - said.length } })
+    // maxRows is read-only: the engine stacks each plugin's row itself (AbovePromptList)
+    const below = await next(e)
 
     const table = $.ui.resolve(e)
     const { Box, Text } = table

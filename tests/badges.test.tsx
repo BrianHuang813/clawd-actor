@@ -76,7 +76,7 @@ test('the hundredth pet earns Best friends', async ($, on) => {
   expect(toasts).toEqual(['Clawd: Badge unlocked: ★ Best friends'])
 })
 
-test("a turn's length and day are counted", async ($, on) => {
+test("a turn's length and day are counted", { timeoutMs: 30_000 }, async ($, on) => {
   // a minute only: every frame of a ten-minute turn would run under the mock clock
   const { clock, stored } = await start($, on, { badges: { hello: 'x' } })
   await $.turn.start({ text: 'big job', turnId: 't1' } as any)

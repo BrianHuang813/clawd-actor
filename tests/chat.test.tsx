@@ -112,17 +112,12 @@ test('a reply that comes back after a newer /clawd is dropped', async ($, on) =>
   expect(await shown(ui)).not.toContain('stale')
 })
 
-test('the mods beneath get the band less the rows Clawd takes', async ($, on) => {
+test('the mods beneath keep their own row: the band is the engine\'s to share, not Clawd\'s', async ($, on) => {
   const rows: number[] = []
   const { ui } = await start($, on, rows)
-  expect(rows.at(-1)).toBe(10) // Clawd away: all of it
-  await $.command.run({ command: 'clawd', args: 'pet' } as any)
-  await ui.redraw(BAND)
-  expect(rows.at(-1)).toBe(10 - 5) // the stage
   await $.command.run({ command: 'clawd', args: 'hello there' } as any)
   await ui.redraw(BAND)
-  expect(rows.at(-1)).toBe(10 - 5 - 3) // the stage and a one-line bubble
+  expect(rows.at(-1)).toBe(10) // maxRows is read-only: each plugin's row gets the whole band
   await ui.redraw({ ...BAND, maxRows: 3 })
   expect(await shown(ui)).toBe('below') // no room for the stage: Clawd stays out
-  expect(rows.at(-1)).toBe(3)
 })

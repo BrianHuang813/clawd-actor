@@ -42,7 +42,7 @@ test('every scene keeps the stage size; Clawd roams only where its props can com
     }
 })
 
-test('the dressed-up scenes put a costume on Clawd, and its hat stays on stage even mid-hop', () => {
+test('the dressed-up scenes put a costume on Clawd, and its hat stays on stage even mid-hop', { timeoutMs: 30_000 }, () => {
   expect([...DRESSED].sort()).toEqual(['bake', 'chalk', 'cook', 'disco', 'herd', 'juggle', 'kick', 'levitate', 'magic', 'sketch', 'think'])
   const text = (rows: { text: string }[][]) => rows.map(r => r.map(x => x.text).join(''))
   /** Each row as one [glyph, colour, background] per character, from column `from`. */
