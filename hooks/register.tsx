@@ -446,8 +446,9 @@ export const register: Register = on => {
     // maxRows is read-only: the engine stacks each plugin's row itself (AbovePromptList)
     const below = await next(e)
 
-    const table = $.ui.resolve(e)
-    const { Box, Text } = table
+    const { Box, Text } = $.ui.resolve(e)
+    // resolved again where e.surface is narrowed: only the terminal's table lacks Svg
+    const Svg = e.surface === 'terminal' ? null : $.ui.resolve(e).Svg
     shown = hold(shown, turnBase, { word, mode, tick: t - turnBase, seed, played, tool: running[running.length - 1]?.tool })
     // a reaction counts its own frames, so a move like shift opens on its first one
     const at = reaction?.scene ? Math.max(0, t - reaction.from) : t
@@ -457,9 +458,9 @@ export const register: Register = on => {
         {said.map(line => (
           <Text mono color="white">{line}</Text>
         ))}
-        {e.surface !== 'terminal' ? (
+        {Svg ? (
           // Desktop, VS Code, mobile: text there is proportional with line gaps, so the stage is drawn as rects
-          <table.Svg source={gridToSvg(frameGrid(word, mode, at, width, scene, true, perks))} alt="Clawd" />
+          <Svg source={gridToSvg(frameGrid(word, mode, at, width, scene, true, perks))} alt="Clawd" />
         ) : (
           <Box flexDirection="column" height={H}>
             {frameRows(word, mode, at, width, scene, true, perks).map(runs => (
