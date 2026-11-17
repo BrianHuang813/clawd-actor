@@ -115,6 +115,7 @@ remember earlier messages.
 | Command | What it does |
 | --- | --- |
 | `/clawd note <text>` | jots a thought under today, with the time |
+| `/clawd notes` | reads back today's notes |
 | `/clawd todo <text>` | saves a todo for some day |
 | `/clawd plan a; b; c` | puts todos on today's list |
 | `/clawd plan` | Clawd suggests up to three of your waiting todos for today |

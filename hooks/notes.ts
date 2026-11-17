@@ -1,4 +1,4 @@
-// /clawd note, plan, done, list and remind: what they ask, and the markdown file they keep.
+// /clawd note, notes, plan, done, list and remind: what they ask, and the markdown file they keep.
 // Pure functions only, like scenes.ts; what Clawd says about it is in say.ts. The file holds one `# YYYY-MM-DD` heading a day, with
 // `## Notes`, `## Todo` and `## Reminders` lists under it, so a person (or Claude) can read it too.
 // A `# Inbox` heading at the top holds the todos for some day, not yet picked for one.
@@ -21,6 +21,7 @@ export type NoteAsk =
   | { kind: 'accept'; picks?: number[] } // plan ok [1 3]: the suggestions taken, 1-based; absent, all
   | { kind: 'done'; n?: number } // the n-th of today's todos, 1-based; absent, the first open one
   | { kind: 'list' }
+  | { kind: 'notes' } // today's notes, read back
   | { kind: 'remind'; when: string; text: string }
   | { kind: 'usage'; of: 'note' | 'todo' | 'plan' | 'done' | 'remind' } // the command, missing what it needs
 
@@ -41,11 +42,12 @@ const parseWhen = (rest: string): { when: string; text: string } | undefined => 
 
 /** The note command `text` asks for, or undefined when it is not one. */
 export const parseNotes = (text: string): NoteAsk | undefined => {
-  const m = /^(note|todo|plan|done|list|remind)(?![\p{L}\p{N}_])\s*(.*)$/isu.exec(text.trim())
+  const m = /^(notes|note|todo|plan|done|list|remind)(?![\p{L}\p{N}_])\s*(.*)$/isu.exec(text.trim())
   if (!m) return undefined
-  const cmd = m[1]!.toLowerCase() as 'note' | 'todo' | 'plan' | 'done' | 'list' | 'remind'
+  const cmd = m[1]!.toLowerCase() as 'notes' | 'note' | 'todo' | 'plan' | 'done' | 'list' | 'remind'
   const rest = m[2]!.trim()
   if (cmd === 'list') return rest ? undefined : { kind: 'list' } // "list the files" is a chat
+  if (cmd === 'notes') return rest ? undefined : { kind: 'notes' } // "notes are handy" is a chat
   if (cmd === 'note') return rest ? { kind: 'note', text: rest } : { kind: 'usage', of: 'note' }
   if (cmd === 'todo') return rest ? { kind: 'todo', text: rest } : { kind: 'usage', of: 'todo' }
   if (cmd === 'plan') {
@@ -146,6 +148,17 @@ export const items = (md: string, day: string, section: string): Item[] => {
   return lines.slice(at.head + 1, at.end).flatMap(l => {
     const m = ITEM.exec(l)
     return m ? [{ isDone: m[1] !== ' ', text: m[2]!.trim() }] : []
+  })
+}
+
+/** The `- ` lines of `day`'s notes, as written: `14:05 ask PM`. */
+export const noteLines = (md: string, day: string): string[] => {
+  const lines = split(md)
+  const at = locate(lines, day, NOTES)
+  if (at.head < 0) return []
+  return lines.slice(at.head + 1, at.end).flatMap(l => {
+    const m = /^\s*- (.*)$/.exec(l)
+    return m?.[1]?.trim() ? [m[1].trim()] : []
   })
 }
 

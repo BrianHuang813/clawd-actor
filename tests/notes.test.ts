@@ -1,6 +1,6 @@
 import { test, expect } from 'claude-code/testing'
 import { langOf } from '../hooks/say'
-import { addLines, candidates, dueReminders, items, parseNotes, readPicks, resolveAt, summary, takeOn, tick, INBOX, NOTES, REMINDERS, TODO } from '../hooks/notes'
+import { addLines, candidates, dueReminders, items, noteLines, parseNotes, readPicks, resolveAt, summary, takeOn, tick, INBOX, NOTES, REMINDERS, TODO } from '../hooks/notes'
 
 const DAY = '2026-11-14'
 const at = (h: number, m: number) => new Date(2026, 10, 14, h, m)
@@ -17,6 +17,7 @@ test('note commands parse; anything else is left to chat', () => {
   expect(parseNotes('done')).toEqual({ kind: 'done' })
   expect(parseNotes('done 2')).toEqual({ kind: 'done', n: 2 })
   expect(parseNotes('list')).toEqual({ kind: 'list' })
+  expect(parseNotes('notes')).toEqual({ kind: 'notes' })
   expect(parseNotes('remind 14:00 standup')).toEqual({ kind: 'remind', when: '14:00', text: 'standup' })
   expect(parseNotes('remind 1h30m call back')).toEqual({ kind: 'remind', when: '1h30m', text: 'call back' })
   // full-width colons, Chinese units, English words for units, no space before the text
@@ -30,7 +31,7 @@ test('note commands parse; anything else is left to chat', () => {
   expect(parseNotes('remind 30 meeting')?.kind).toBe('usage')
   for (const bad of ['note', 'todo', 'plan ;', 'done 0', 'remind standup', 'remind 14:00'])
     expect(parseNotes(bad)?.kind).toBe('usage')
-  for (const chat of ['notebook is cool', 'what did I note?', 'hello', 'planning ahead', 'list the files I changed', 'done with this?'])
+  for (const chat of ['notebook is cool', 'what did I note?', 'hello', 'planning ahead', 'list the files I changed', 'done with this?', 'notes are handy'])
     expect(parseNotes(chat)).toBeUndefined()
 })
 
@@ -83,6 +84,12 @@ test('reminders are called out 5 minutes ahead, then when due, until ticked', ()
   expect(dueReminders(md, DAY, 13 * 60 + 55)).toEqual([{ n: 0, at: 14 * 60, text: 'standup', isNow: false }])
   expect(dueReminders(md, DAY, 14 * 60)).toEqual([{ n: 0, at: 14 * 60, text: 'standup', isNow: true }])
   expect(dueReminders(tick(md, DAY, REMINDERS, 0)!, DAY, 14 * 60 + 1)).toEqual([])
+})
+
+test('notes read back the day\'s note lines, in order', () => {
+  const md = addLines(addLines('', DAY, NOTES, ['- 09:10 ask PM', '- 14:05 等下要問']), DAY, TODO, ['- [ ] a'])
+  expect(noteLines(md, DAY)).toEqual(['09:10 ask PM', '14:05 等下要問'])
+  expect(noteLines(md, '2026-11-13')).toEqual([])
 })
 
 test('the summary numbers todos and lists what is still to come', () => {

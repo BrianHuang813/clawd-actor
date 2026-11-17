@@ -4,7 +4,7 @@ import type { EngineInterface as Engine, Register } from 'claude-code'
 import { bubble, clean, holdFrames, parseClawd, persona, HELP } from './chat'
 import { langOf, say, type Lang } from './say'
 import { cheer, earned, onTurn, readGot, readStats, shelf, type Stats } from './badges'
-import { addLines, candidates, dayKey, dueReminders, hhmm, items, minuteOf, pickPrompt, readPicks, resolveAt, summary, takeOn, tick as tickItem, INBOX, NOTES, PICK_SYSTEM, REMINDERS, TODO, WARN_MIN, type Candidate, type NoteAsk } from './notes'
+import { addLines, candidates, dayKey, dueReminders, hhmm, items, minuteOf, noteLines, pickPrompt, readPicks, resolveAt, summary, takeOn, tick as tickItem, INBOX, NOTES, PICK_SYSTEM, REMINDERS, TODO, WARN_MIN, type Candidate, type NoteAsk } from './notes'
 import { ACT_FRAMES, FRAME_MS, frameGrid, frameRows, H, hold, rewardScene, type Mode, type Shown } from './scenes'
 import { gridToSvg } from './svg'
 
@@ -260,6 +260,9 @@ const keepNotes = async ($: Engine, ask: NoteAsk) => {
         return tickItem(md, day, TODO, n)
       })
       if (isTicked) tally($, st => ({ ...st, todosDone: st.todosDone + 1, clearDays: st.clearDays + (isCleared ? 1 : 0) }))
+    } else if (ask.kind === 'notes') {
+      const notes = noteLines(await edit($), day)
+      ;[scene, line] = ['think', notes.length ? s.notes(notes.join(' · ')) : s.noNotes]
     } else [scene, line] = ['think', summary(await edit($), day, lang)]
   } catch (err) {
     ;[scene, line] = ['wave', s.noNotebook(err instanceof Error ? err.message : String(err))]
@@ -357,7 +360,7 @@ export const register: Register = on => {
       return isTurnRunning || isReacting ? tick($) : undefined
     })
     // last, so the timers run whatever happens here; immediate: /clawd runs mid-turn instead of waiting
-    await $.command.register({ name: 'clawd', description: 'Pet, feed or wave at Clawd, or say something to it', argumentHint: '[pet|feed|wave|dance|shift|note|todo|plan|done|list|remind|message]', immediate: true })
+    await $.command.register({ name: 'clawd', description: 'Pet, feed or wave at Clawd, or say something to it', argumentHint: '[pet|feed|wave|dance|shift|note|notes|todo|plan|done|list|remind|message]', immediate: true })
     return r
   })
 

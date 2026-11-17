@@ -39,6 +39,8 @@ const EN = {
   nextUp: (text: string) => `Next up: ${text}`,
   today: (list: string) => `Today: ${list}`,
   noTodos: 'No todos today.',
+  notes: (list: string) => `Notes: ${list}`,
+  noNotes: 'No notes today. /clawd note <text> jots one.',
   later: (list: string) => `Later: ${list}`,
   todos: (list: string) => `Todo: ${list} (/clawd plan to pick)`,
 }
@@ -76,6 +78,8 @@ const ZH: typeof EN = {
   nextUp: text => `下一件：${text}`,
   today: list => `今天：${list}`,
   noTodos: '今天還沒有待辦。',
+  notes: list => `筆記：${list}`,
+  noNotes: '今天還沒有筆記，/clawd note <內容> 記一筆。',
   later: list => `稍後：${list}`,
   todos: list => `待辦：${list}（/clawd plan 來挑）`,
 }
