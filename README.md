@@ -2,7 +2,7 @@
 
 A Claude Code mod: while Claude works, **Clawd** walks onto a little stage above the prompt and
 acts out what is going on: the spinner's `-ing` word (*Sautéing*, *Pondering*, *Herding*…), in
-32 scenes with costumes and little friends. It also keeps your notes, todos and reminders, and
+33 scenes with costumes and little friends. It also keeps your notes, todos and reminders, and
 hands out badges.
 
 ![Clawd as a detective in a fedora, magnifying glass in hand, pondering under a thought bubble; calling out 閃身步 and flash-stepping across the stage and back; and as a homemaker in a curly perm and apron, cooking at a pot that stays put](assets/demo.gif)
@@ -47,7 +47,7 @@ there). `claude -p` and cloud sessions draw no mod interface, so Clawd does not 
 - **Leaves when the turn ends** and draws nothing while idle, unless you call it out with `/clawd`.
 
 <details>
-<summary>All 32 scenes and the words that pick them</summary>
+<summary>All 33 scenes and the words that pick them</summary>
 
 | Scene | Spinner words (some of them) |
 | --- | --- |
