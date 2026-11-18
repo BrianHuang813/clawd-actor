@@ -1,6 +1,6 @@
 import { test, expect } from 'claude-code/testing'
 import { langOf } from '../hooks/say'
-import { addLines, candidates, listAll, markNotes, splitNotebook, sweep, dueReminders, items, noteLines, parseNotes, readPicks, resolveAt, summary, takeOn, tick, INBOX, NOTES, REMINDERS, TODO } from '../hooks/notes'
+import { addLines, candidates, listAll, markNotes, readConfig, splitNotebook, sweep, dueReminders, items, noteLines, parseNotes, readPicks, resolveAt, summary, takeOn, tick, INBOX, NOTES, REMINDERS, TODO } from '../hooks/notes'
 
 const DAY = '2026-11-14'
 const at = (h: number, m: number) => new Date(2026, 10, 14, h, m)
@@ -176,4 +176,11 @@ test('sweep drops only what is finished, in the inbox and before the cutoff, and
 
   const notes = '# 2026-10-01\n\n## Notes\n- 09:00 taken → 10-01\n\n# 2026-10-02\n\n## Notes\n- 09:00 open idea\n- 10:00 taken → 10-03\n'
   expect(sweep(notes, '2026-10-15')).toEqual({ md: '# 2026-10-02\n\n## Notes\n- 09:00 open idea\n', count: 2 })
+})
+
+test('settings take whole numbers in range, else their defaults', () => {
+  expect(readConfig()).toEqual({ keepDays: 30, cleanHint: 20, remindAhead: 5, nudgeMinutes: 30 })
+  expect(readConfig({ keepDays: 7, cleanHint: 0, remindAhead: 10, nudgeMinutes: 0 })).toEqual({ keepDays: 7, cleanHint: 0, remindAhead: 10, nudgeMinutes: 0 })
+  expect(readConfig({ keepDays: 0, remindAhead: -1, nudgeMinutes: 2.5, cleanHint: 'x' })).toEqual(readConfig())
+  expect(dueReminders(addLines('', DAY, REMINDERS, ['- [ ] 14:00 standup']), DAY, 13 * 60 + 50, 10)[0]?.isNow).toBe(false)
 })

@@ -11,6 +11,7 @@ export const REMINDERS = 'Reminders'
 export const INBOX = 'Inbox' // kept like a day of its own, at the top of the file
 export const NOTES_FILE = 'clawd-notes.md'
 export const TODO_FILE = 'clawd-todo.md'
+// the defaults of the settings plugin.json's userConfig declares
 export const KEEP_DAYS = 30 // /clawd clean leaves the days this recent alone
 export const CLEAN_HINT = 20 // finished lines to clean before /clawd list mentions it
 export const MAX_PICKS = 3 // suggestions a plan offers: as many as the bubble shows
@@ -188,15 +189,15 @@ export const tick = (md: string, day: string, section: string, n: number, note =
 
 export type Due = { n: number; at: number; text: string; isNow: boolean }
 
-/** Today's open reminders to call out at minute `nowMin`: due ones (isNow), and ones within WARN_MIN minutes. */
-export const dueReminders = (md: string, day: string, nowMin: number): Due[] =>
+/** Today's open reminders to call out at minute `nowMin`: due ones (isNow), and ones within `warnMin` minutes. */
+export const dueReminders = (md: string, day: string, nowMin: number, warnMin = WARN_MIN): Due[] =>
   items(md, day, REMINDERS).flatMap((it, n): Due[] => {
     const m = /^(\d{1,2}:\d{2}) (.*)$/.exec(it.text)
     if (it.isDone || !m) return []
     const at = toMin(m[1]!)
     const text = m[2]!
     if (at <= nowMin) return [{ n, at, text, isNow: true }]
-    return at - nowMin <= WARN_MIN ? [{ n, at, text, isNow: false }] : []
+    return at - nowMin <= warnMin ? [{ n, at, text, isNow: false }] : []
   })
 
 /** What /clawd list says: today's todos, numbered and ticked, the reminders still to come, and the todos waiting in the inbox. */
@@ -391,4 +392,21 @@ export const sweep = (md: string, cutoff: string): { md: string; count: number }
   }
   const text = out.join('\n').replace(/\n{3,}/g, '\n\n').trim()
   return { md: text ? text + '\n' : '', count }
+}
+
+/** The settings: the person's own from plugin.json's userConfig, each a whole number of at least `min`, else its default. */
+export type Config = { keepDays: number; cleanHint: number; remindAhead: number; nudgeMinutes: number }
+const LIMITS: Record<keyof Config, [fallback: number, min: number]> = {
+  keepDays: [KEEP_DAYS, 1],
+  cleanHint: [CLEAN_HINT, 0], // 0: never mentioned
+  remindAhead: [WARN_MIN, 0], // 0: called only when due
+  nudgeMinutes: [30, 0], // 0: no "next up" bubbles
+}
+export const readConfig = (options: Readonly<Record<string, unknown>> = {}): Config => {
+  const pick = (k: keyof Config) => {
+    const [fallback, min] = LIMITS[k]
+    const n = Number(options[k])
+    return Number.isInteger(n) && n >= min ? n : fallback
+  }
+  return { keepDays: pick('keepDays'), cleanHint: pick('cleanHint'), remindAhead: pick('remindAhead'), nudgeMinutes: pick('nudgeMinutes') }
 }

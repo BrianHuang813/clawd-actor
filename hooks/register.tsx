@@ -4,7 +4,7 @@ import type { EngineInterface as Engine, Register } from 'claude-code'
 import { bubble, clean, holdFrames, parseClawd, persona, HELP } from './chat'
 import { langOf, say, type Lang } from './say'
 import { cheer, earned, onTurn, readGot, readStats, shelf, type Stats } from './badges'
-import { addLines, candidates, dayKey, dueReminders, hhmm, items, listAll, markNotes, minuteOf, noteLines, pickPrompt, readPicks, resolveAt, splitNotebook, summary, sweep, takeOn, tick as tickItem, INBOX, NOTES, NOTES_FILE, PICK_SYSTEM, REMINDERS, TODO, TODO_FILE, WARN_MIN, CLEAN_HINT, KEEP_DAYS, type Candidate, type NoteAsk } from './notes'
+import { addLines, candidates, dayKey, dueReminders, hhmm, items, listAll, markNotes, minuteOf, noteLines, pickPrompt, readPicks, resolveAt, splitNotebook, summary, sweep, takeOn, tick as tickItem, INBOX, NOTES, NOTES_FILE, PICK_SYSTEM, REMINDERS, TODO, TODO_FILE, readConfig, type Candidate, type NoteAsk } from './notes'
 import { ACT_FRAMES, FRAME_MS, frameGrid, frameRows, H, hold, rewardScene, SIXSEVEN_FRAMES, type Mode, type Shown } from './scenes'
 import { gridToSvg } from './svg'
 
@@ -31,7 +31,7 @@ const running: { id: string; tool: string }[] = [] // tools in flight, newest la
 const REACT_FRAMES = Math.round(6000 / FRAME_MS) // how long a /clawd action plays
 const WAIT_FRAMES = Math.round(15_000 / FRAME_MS) // the most Clawd ponders before a reply
 const REMIND_CHECK_MS = 30_000 // how often the notebook is read for reminders due
-const NUDGE_MS = 30 * 60_000 // the least time between two "next up" bubbles at a turn's start
+let config = readConfig() // the person's settings, from register's options
 const UPDATE_CHECK_MS = 2000 // after start-up settles, so the toast is seen
 const LATEST = 'https://raw.githubusercontent.com/BrianHuang813/clawd-actor/main/.claude-plugin/plugin.json'
 const RELEASES = 'https://github.com/BrianHuang813/clawd-actor/releases'
@@ -208,8 +208,8 @@ const suggest = async ($: Engine, now: Date, id: number, lang: Lang) => {
   return say(lang).offer(suggested.map((c, i) => `${i + 1}. ${c.text}`).join(' '), clean(why))
 }
 
-/** The first day /clawd clean leaves alone: KEEP_DAYS before `now`. */
-const cutoffOf = (now: Date) => dayKey(new Date(now.getTime() - KEEP_DAYS * 24 * 60 * 60_000))
+/** The first day /clawd clean leaves alone: the keepDays setting before `now`. */
+const cutoffOf = (now: Date) => dayKey(new Date(now.getTime() - config.keepDays * 24 * 60 * 60_000))
 
 const USAGE = { note: 'usageNote', todo: 'usageTodo', plan: 'usagePlan', done: 'usageDone', remind: 'usageRemind' } as const
 
@@ -272,7 +272,7 @@ const keepNotes = async ($: Engine, ask: NoteAsk) => {
       else {
         await edit($, TODO_FILE, md => addLines(md, day, REMINDERS, [`- [ ] ${hhmm(at)} ${clean(ask.text)}`]))
         // set inside the warning window: just said, so only the call when due is left
-        if (at - minuteOf(now) <= WARN_MIN) warned.add(`${day} ${at} ${clean(ask.text)}`)
+        if (at - minuteOf(now) <= config.remindAhead) warned.add(`${day} ${at} ${clean(ask.text)}`)
         tally($, st => ({ ...st, reminders: st.reminders + 1 }))
         ;[scene, line] = ['type', s.remindSet(hhmm(at), clean(ask.text))]
       }
@@ -306,7 +306,7 @@ const keepNotes = async ($: Engine, ask: NoteAsk) => {
     else {
       const todo = await edit($, TODO_FILE)
       const old = sweep(todo, cutoffOf(now)).count + sweep(await edit($, NOTES_FILE), cutoffOf(now)).count
-      line = [summary(todo, day, lang), old >= CLEAN_HINT ? s.cleanHint(old) : ''].filter(Boolean).join(' · ')
+      line = [summary(todo, day, lang), config.cleanHint && old >= config.cleanHint ? s.cleanHint(old) : ''].filter(Boolean).join(' · ')
       scene = 'think'
     }
   } catch (err) {
@@ -325,7 +325,7 @@ const remind = async ($: Engine) => {
   try {
     await edit($, TODO_FILE, md => {
       let out = md
-      for (const due of dueReminders(md, day, min)) {
+      for (const due of dueReminders(md, day, min, config.remindAhead)) {
         const key = `${day} ${due.at} ${due.text}`
         const s = say(langOf(due.text))
         if (due.isNow) {
@@ -352,8 +352,8 @@ let nudgedAt = -Infinity
 /** At a turn's start, now and then, says the next open todo over the show. */
 const nudge = async ($: Engine) => {
   const now = await $.clock.now()
-  if (now - nudgedAt < NUDGE_MS) return
-  nudgedAt = now // read the notebook at most every NUDGE_MS, todos or not
+  if (!config.nudgeMinutes || now - nudgedAt < config.nudgeMinutes * 60_000) return
+  nudgedAt = now // read the notebook at most every nudgeMinutes, todos or not
   let md: string
   try {
     md = await edit($, TODO_FILE)
@@ -384,7 +384,8 @@ const reply = async ($: Engine, text: string, now: string, id: number) => {
   if (id === asked) await react($, 'say', say, holdFrames(say)) // else a newer /clawd took the stage meanwhile
 }
 
-export const register: Register = on => {
+export const register: Register = (on, options) => {
+  config = readConfig(options)
   // A timer must start where work may outlive the dispatch: session.start (fires again on reload).
   // It ticks all session long but only writes, and so redraws, while a turn runs.
   on('session.start', async ($, e, next) => {

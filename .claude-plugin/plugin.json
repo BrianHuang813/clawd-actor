@@ -7,5 +7,35 @@
   "repository": "https://github.com/BrianHuang813/clawd-actor",
   "license": "MIT",
   "keywords": ["mod", "animation", "spinner", "clawd", "fun"],
-  "types": "./types/index.d.ts"
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "keepDays": {
+      "type": "number",
+      "title": "Days /clawd clean keeps",
+      "description": "/clawd clean only clears finished lines older than this many days.",
+      "required": false,
+      "default": 30
+    },
+    "cleanHint": {
+      "type": "number",
+      "title": "Old lines before /clawd list mentions cleaning",
+      "description": "How many old finished lines pile up before /clawd list suggests /clawd clean. 0 never mentions it.",
+      "required": false,
+      "default": 20
+    },
+    "remindAhead": {
+      "type": "number",
+      "title": "Minutes a reminder is called out ahead",
+      "description": "Clawd honks this many minutes before a reminder, then again when it is due. 0 only calls it when due.",
+      "required": false,
+      "default": 5
+    },
+    "nudgeMinutes": {
+      "type": "number",
+      "title": "Minutes between \"next up\" bubbles",
+      "description": "At a turn's start Clawd shows the next open todo at most this often. 0 turns it off.",
+      "required": false,
+      "default": 30
+    }
+  }
 }

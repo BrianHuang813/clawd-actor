@@ -243,3 +243,18 @@ test('/clawd clean clears old finished lines from both files; list hints when th
   await ui.redraw(BAND)
   expect(await shown(ui)).toContain('Nothing old')
 })
+
+test('the settings change how long clean keeps, and turn the hint and the nudge off', { options: { keepDays: 3, cleanHint: 0, nudgeMinutes: 0 } }, async ($, on) => {
+  const done = Array.from({ length: 25 }, (_, i) => `- [x] job ${i}`).join('\n')
+  const todo = `# 2026-11-10\n\n## Todo\n${done}\n\n# 2026-11-12\n\n## Todo\n- [x] recent\n\n# ${'2026-11-14'}\n\n## Todo\n- [ ] b\n`
+  const { clock, ui, files } = await start($, on, { [PATH]: todo })
+  await $.turn.start({ text: 'hi', turnId: 't1' } as any)
+  await clock.advance(10)
+  await ui.redraw({ ...BAND, isWorking: true })
+  expect(await shown(ui)).not.toContain('Next up')
+  await clawd($, clock, 'list')
+  await ui.redraw(BAND)
+  expect(await shown(ui)).not.toContain('/clawd clean')
+  await clawd($, clock, 'clean')
+  expect(files[PATH]).toBe('# 2026-11-12\n\n## Todo\n- [x] recent\n\n# 2026-11-14\n\n## Todo\n- [ ] b\n')
+})

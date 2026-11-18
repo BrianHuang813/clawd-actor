@@ -126,17 +126,26 @@ remember earlier messages.
 | `/clawd list` | today's list, reminders still to come, and the todos waiting |
 | `/clawd list note` | every note not yet planned, from any day, newest first |
 | `/clawd list todo` | every open todo, from any day, newest first |
-| `/clawd clean` | clears finished lines older than 30 days: ticked todos and reminders, notes taken on |
+| `/clawd clean` | clears finished lines older than 30 days (a setting): ticked todos and reminders, notes taken on |
 | `/clawd remind 14:00 standup` | a reminder for later today (also `30m`, `1h30m`, `14：00`, `30分`) |
 
-- **Reminders:** Clawd honks five minutes ahead and again when it is due, with a toast. They only
+- **Reminders:** Clawd honks five minutes ahead (a setting) and again when it is due, with a toast. They only
   work while Claude Code is open: they keep you on time while you code, they are not a calendar.
 - **Suggestions** come from Haiku, which picks only among todos and notes you wrote; when it does
   not answer, the oldest are offered. A note taken on gets `→ MM-DD` after it and is not offered again.
 - **Cleaning** never touches open todos, notes not yet planned, or your own lines, and only runs
-  when you ask; `/clawd list` mentions it once 20 old finished lines pile up.
+  when you ask; `/clawd list` mentions it once enough old finished lines pile up (see Settings).
 - **Languages:** commands are English, what you write can be anything; Clawd answers in Chinese
   when it is about Chinese text, in English otherwise.
+
+**Settings** (`/config`, under clawd-actor):
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `keepDays` | 30 | `/clawd clean` only clears finished lines older than this many days |
+| `cleanHint` | 20 | old finished lines before `/clawd list` mentions cleaning; 0 never |
+| `remindAhead` | 5 | minutes a reminder is called out ahead; 0 only when due |
+| `nudgeMinutes` | 30 | least minutes between "next up" bubbles at a turn's start; 0 off |
 
 Notes go to `~/.claude/clawd-notes.md`, todos and reminders to `~/.claude/clawd-todo.md`: plain
 markdown files you can edit, or ask Claude to plan your day from. A notebook from before 0.9, with
