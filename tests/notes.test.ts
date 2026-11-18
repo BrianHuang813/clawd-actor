@@ -21,7 +21,6 @@ test('note commands parse; anything else is left to chat', () => {
   expect(parseNotes('clean')).toEqual({ kind: 'clean' })
   expect(parseNotes('clean up this function')).toBeUndefined()
   expect(parseNotes('LIST todos')).toEqual({ kind: 'list', of: 'todo' })
-  expect(parseNotes('notes')).toEqual({ kind: 'notes' })
   expect(parseNotes('remind 14:00 standup')).toEqual({ kind: 'remind', when: '14:00', text: 'standup' })
   expect(parseNotes('remind 1h30m call back')).toEqual({ kind: 'remind', when: '1h30m', text: 'call back' })
   // full-width colons, Chinese units, English words for units, no space before the text
@@ -35,7 +34,7 @@ test('note commands parse; anything else is left to chat', () => {
   expect(parseNotes('remind 30 meeting')?.kind).toBe('usage')
   for (const bad of ['note', 'todo', 'plan ;', 'done 0', 'remind standup', 'remind 14:00'])
     expect(parseNotes(bad)?.kind).toBe('usage')
-  for (const chat of ['notebook is cool', 'what did I note?', 'hello', 'planning ahead', 'list the files I changed', 'done with this?', 'notes are handy'])
+  for (const chat of ['notebook is cool', 'what did I note?', 'hello', 'planning ahead', 'list the files I changed', 'done with this?', 'notes are handy', 'notes'])
     expect(parseNotes(chat)).toBeUndefined()
 })
 

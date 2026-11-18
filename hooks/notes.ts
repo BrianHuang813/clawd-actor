@@ -1,4 +1,4 @@
-// /clawd note, notes, plan, done, list and remind: what they ask, and the markdown file they keep.
+// /clawd note, todo, plan, done, list, remind and clean: what they ask, and the markdown file they keep.
 // Pure functions only, like scenes.ts; what Clawd says about it is in say.ts. Two files, each one `# YYYY-MM-DD` heading a day:
 // the notes file has a `## Notes` list under it, the todo file `## Todo` and `## Reminders`, so a person (or Claude) can read them.
 // A `# Inbox` heading at the top of the todo file holds the todos for some day, not yet picked for one.
@@ -28,7 +28,6 @@ export type NoteAsk =
   | { kind: 'accept'; picks?: number[] } // plan ok [1 3]: the suggestions taken, 1-based; absent, all
   | { kind: 'done'; n?: number } // the n-th of today's todos, 1-based; absent, the first open one
   | { kind: 'list'; of?: 'note' | 'todo' } // absent: today's list; note or todo: every open one, all days
-  | { kind: 'notes' } // today's notes, read back
   | { kind: 'remind'; when: string; text: string }
   | { kind: 'clean' } // drops what is finished from days before KEEP_DAYS ago
   | { kind: 'usage'; of: 'note' | 'todo' | 'plan' | 'done' | 'remind' } // the command, missing what it needs
@@ -50,9 +49,9 @@ const parseWhen = (rest: string): { when: string; text: string } | undefined => 
 
 /** The note command `text` asks for, or undefined when it is not one. */
 export const parseNotes = (text: string): NoteAsk | undefined => {
-  const m = /^(notes|note|todo|plan|done|list|remind|clean)(?![\p{L}\p{N}_])\s*(.*)$/isu.exec(text.trim())
+  const m = /^(note|todo|plan|done|list|remind|clean)(?![\p{L}\p{N}_])\s*(.*)$/isu.exec(text.trim())
   if (!m) return undefined
-  const cmd = m[1]!.toLowerCase() as 'notes' | 'note' | 'todo' | 'plan' | 'done' | 'list' | 'remind' | 'clean'
+  const cmd = m[1]!.toLowerCase() as 'note' | 'todo' | 'plan' | 'done' | 'list' | 'remind' | 'clean'
   const rest = m[2]!.trim()
   if (cmd === 'clean') return rest ? undefined : { kind: 'clean' } // "clean up this function" is a chat
   if (cmd === 'list') {
@@ -61,7 +60,6 @@ export const parseNotes = (text: string): NoteAsk | undefined => {
     if (/^todos?$/i.test(rest)) return { kind: 'list', of: 'todo' }
     return undefined // "list the files" is a chat
   }
-  if (cmd === 'notes') return rest ? undefined : { kind: 'notes' } // "notes are handy" is a chat
   if (cmd === 'note') return rest ? { kind: 'note', text: rest } : { kind: 'usage', of: 'note' }
   if (cmd === 'todo') return rest ? { kind: 'todo', text: rest } : { kind: 'usage', of: 'todo' }
   if (cmd === 'plan') {
