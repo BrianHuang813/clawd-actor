@@ -1,6 +1,6 @@
 import { test, expect } from 'claude-code/testing'
 import { langOf } from '../hooks/say'
-import { addLines, candidates, listAll, markNotes, splitNotebook, dueReminders, items, noteLines, parseNotes, readPicks, resolveAt, summary, takeOn, tick, INBOX, NOTES, REMINDERS, TODO } from '../hooks/notes'
+import { addLines, candidates, listAll, markNotes, splitNotebook, sweep, dueReminders, items, noteLines, parseNotes, readPicks, resolveAt, summary, takeOn, tick, INBOX, NOTES, REMINDERS, TODO } from '../hooks/notes'
 
 const DAY = '2026-11-14'
 const at = (h: number, m: number) => new Date(2026, 10, 14, h, m)
@@ -18,6 +18,8 @@ test('note commands parse; anything else is left to chat', () => {
   expect(parseNotes('done 2')).toEqual({ kind: 'done', n: 2 })
   expect(parseNotes('list')).toEqual({ kind: 'list' })
   expect(parseNotes('list note')).toEqual({ kind: 'list', of: 'note' })
+  expect(parseNotes('clean')).toEqual({ kind: 'clean' })
+  expect(parseNotes('clean up this function')).toBeUndefined()
   expect(parseNotes('LIST todos')).toEqual({ kind: 'list', of: 'todo' })
   expect(parseNotes('notes')).toEqual({ kind: 'notes' })
   expect(parseNotes('remind 14:00 standup')).toEqual({ kind: 'remind', when: '14:00', text: 'standup' })
@@ -106,7 +108,7 @@ test('the inbox sits at the top; candidates are days past, oldest first, then th
   md = addLines(md, DAY, TODO, ['- [ ] today'])
   expect(md.startsWith(`# ${INBOX}\n\n## ${TODO}\n- [ ] someday\n\n# 2026-11-13`)).toBe(true)
   expect(candidates(md, '', DAY)).toEqual([{ from: '2026-11-13', text: 'left over' }, { from: INBOX, text: 'someday' }])
-  expect(summary(md, DAY, 'en')).toBe('Today: 1. today · Todo: someday (/clawd plan to pick)')
+  expect(summary(md, DAY, 'en')).toBe('Today: 1. today · Todo: someday (/clawd plan to pick) · 1 left from earlier days (/clawd list todo)')
 })
 
 test("Haiku's picks are read safely, and the oldest stand in when they do not hold", () => {
@@ -153,4 +155,25 @@ test('splitting a notebook with nothing but notes leaves no todo file', () => {
   const md = addLines('', DAY, NOTES, ['- 10:00 hi'])
   expect(splitNotebook(md)).toEqual({ notes: md, todo: '' })
   expect(splitNotebook('')).toEqual({ notes: '', todo: '' })
+})
+
+test('the summary counts the todos left from earlier days', () => {
+  const md = addLines(addLines('', '2026-11-12', TODO, ['- [ ] a', '- [x] b']), '2026-11-13', TODO, ['- [ ] c'])
+  expect(summary(md, DAY, 'en')).toBe('No todos today. · 2 left from earlier days (/clawd list todo)')
+})
+
+test('sweep drops only what is finished, in the inbox and before the cutoff, and the days left empty', () => {
+  const todo = [
+    '# Inbox', '', '## Todo', '- [ ] someday', '- [x] moved → 11-01', '',
+    '# 2026-10-01', '', '## Todo', '- [x] done', '', '## Reminders', '- [x] 14:00 standup', '',
+    '# 2026-10-02', '', 'my own line', '', '## Todo', '- [x] done', '- [ ] still open', '',
+    `# ${DAY}`, '', '## Todo', '- [x] recent', '',
+  ].join('\n')
+  const r = sweep(todo, '2026-10-15')
+  expect(r.count).toBe(4)
+  expect(r.md).toBe(`# Inbox\n\n## Todo\n- [ ] someday\n\n# 2026-10-02\n\nmy own line\n\n## Todo\n- [ ] still open\n\n# ${DAY}\n\n## Todo\n- [x] recent\n`)
+  expect(sweep(r.md, '2026-10-15').count).toBe(0)
+
+  const notes = '# 2026-10-01\n\n## Notes\n- 09:00 taken → 10-01\n\n# 2026-10-02\n\n## Notes\n- 09:00 open idea\n- 10:00 taken → 10-03\n'
+  expect(sweep(notes, '2026-10-15')).toEqual({ md: '# 2026-10-02\n\n## Notes\n- 09:00 open idea\n', count: 2 })
 })

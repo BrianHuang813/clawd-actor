@@ -4,7 +4,7 @@ import type { EngineInterface as Engine, Register } from 'claude-code'
 import { bubble, clean, holdFrames, parseClawd, persona, HELP } from './chat'
 import { langOf, say, type Lang } from './say'
 import { cheer, earned, onTurn, readGot, readStats, shelf, type Stats } from './badges'
-import { addLines, candidates, dayKey, dueReminders, hhmm, items, listAll, markNotes, minuteOf, noteLines, pickPrompt, readPicks, resolveAt, splitNotebook, summary, takeOn, tick as tickItem, INBOX, NOTES, NOTES_FILE, PICK_SYSTEM, REMINDERS, TODO, TODO_FILE, WARN_MIN, type Candidate, type NoteAsk } from './notes'
+import { addLines, candidates, dayKey, dueReminders, hhmm, items, listAll, markNotes, minuteOf, noteLines, pickPrompt, readPicks, resolveAt, splitNotebook, summary, sweep, takeOn, tick as tickItem, INBOX, NOTES, NOTES_FILE, PICK_SYSTEM, REMINDERS, TODO, TODO_FILE, WARN_MIN, CLEAN_HINT, KEEP_DAYS, type Candidate, type NoteAsk } from './notes'
 import { ACT_FRAMES, FRAME_MS, frameGrid, frameRows, H, hold, rewardScene, SIXSEVEN_FRAMES, type Mode, type Shown } from './scenes'
 import { gridToSvg } from './svg'
 
@@ -208,6 +208,9 @@ const suggest = async ($: Engine, now: Date, id: number, lang: Lang) => {
   return say(lang).offer(suggested.map((c, i) => `${i + 1}. ${c.text}`).join(' '), clean(why))
 }
 
+/** The first day /clawd clean leaves alone: KEEP_DAYS before `now`. */
+const cutoffOf = (now: Date) => dayKey(new Date(now.getTime() - KEEP_DAYS * 24 * 60 * 60_000))
+
 const USAGE = { note: 'usageNote', todo: 'usageTodo', plan: 'usagePlan', done: 'usageDone', remind: 'usageRemind' } as const
 
 /** The language Clawd answers a note command in: its text's, or the notebook's when it has none. */
@@ -290,8 +293,22 @@ const keepNotes = async ($: Engine, ask: NoteAsk) => {
     } else if (ask.kind === 'notes') {
       const notes = noteLines(await edit($, NOTES_FILE), day)
       ;[scene, line] = ['think', notes.length ? s.notes(notes.join(' · ')) : s.noNotes]
+    } else if (ask.kind === 'clean') {
+      let count = 0
+      for (const file of [TODO_FILE, NOTES_FILE] as const)
+        await edit($, file, md => {
+          const r = sweep(md, cutoffOf(now))
+          count += r.count
+          return r.md
+        })
+      ;[scene, line] = count ? ['sketch', s.cleaned(count)] : ['wave', s.nothingToClean]
     } else if (ask.of) [scene, line] = ['think', listAll(ask.of, await edit($, TODO_FILE), await edit($, NOTES_FILE), day, lang)]
-    else [scene, line] = ['think', summary(await edit($, TODO_FILE), day, lang)]
+    else {
+      const todo = await edit($, TODO_FILE)
+      const old = sweep(todo, cutoffOf(now)).count + sweep(await edit($, NOTES_FILE), cutoffOf(now)).count
+      line = [summary(todo, day, lang), old >= CLEAN_HINT ? s.cleanHint(old) : ''].filter(Boolean).join(' · ')
+      scene = 'think'
+    }
   } catch (err) {
     ;[scene, line] = ['wave', s.noNotebook(err instanceof Error ? err.message : String(err))]
   }
@@ -388,7 +405,7 @@ export const register: Register = on => {
       return isTurnRunning || isReacting ? tick($) : undefined
     })
     // last, so the timers run whatever happens here; immediate: /clawd runs mid-turn instead of waiting
-    await $.command.register({ name: 'clawd', description: 'Pet, feed or wave at Clawd, or say something to it', argumentHint: '[pet|feed|wave|dance|shift|67|note|notes|todo|plan|done|list [note|todo]|remind|message]', immediate: true })
+    await $.command.register({ name: 'clawd', description: 'Pet, feed or wave at Clawd, or say something to it', argumentHint: '[pet|feed|wave|dance|shift|67|note|notes|todo|plan|done|list [note|todo]|remind|clean|message]', immediate: true })
     return r
   })
 

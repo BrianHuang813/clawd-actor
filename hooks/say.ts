@@ -47,6 +47,10 @@ const EN = {
   noOpenNotes: 'No notes waiting. /clawd note <text> jots one.',
   allTodos: (n: number, list: string) => `${n} open todos, newest first: ${list}`,
   noOpenTodos: 'No open todos. /clawd todo <text> saves one.',
+  earlier: (n: number) => `${n} left from earlier days (/clawd list todo)`,
+  cleanHint: (n: number) => `${n} old finished lines: /clawd clean clears them`,
+  cleaned: (n: number) => `Cleared ${n} old finished lines. Open ones stay.`,
+  nothingToClean: 'Nothing old and finished to clear.',
 }
 
 const ZH: typeof EN = {
@@ -90,6 +94,10 @@ const ZH: typeof EN = {
   noOpenNotes: '沒有待排的筆記，/clawd note <內容> 記一筆。',
   allTodos: (n, list) => `${n} 項待辦還沒完成，新的在前：${list}`,
   noOpenTodos: '沒有未完成的待辦，/clawd todo <內容> 存一項。',
+  earlier: n => `以前還有 ${n} 項沒做完（/clawd list todo）`,
+  cleanHint: n => `有 ${n} 筆舊的已完成紀錄，/clawd clean 可以清掉`,
+  cleaned: n => `清掉了 ${n} 筆舊的已完成紀錄，沒完成的都還在。`,
+  nothingToClean: '沒有可以清的舊紀錄。',
 }
 
 /** Clawd's lines in `lang`. */

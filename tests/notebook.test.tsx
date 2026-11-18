@@ -225,3 +225,21 @@ test('list note and list todo show every open one, from all days, newest first',
   expect(t).toContain('2 open todos')
   expect(t.indexOf('someday')).toBeLessThan(t.indexOf('11-13 left over'))
 })
+
+test('/clawd clean clears old finished lines from both files; list hints when there are many', async ($, on) => {
+  const done = Array.from({ length: 20 }, (_, i) => `- [x] job ${i}`).join('\n')
+  const todo = `# 2026-09-01\n\n## Todo\n${done}\n- [ ] still open\n`
+  const notes = '# 2026-09-01\n\n## Notes\n- 09:00 taken → 09-01\n- 09:05 kept\n'
+  const { clock, ui, files } = await start($, on, { [PATH]: todo, [NOTES]: notes })
+  await clawd($, clock, 'list')
+  await ui.redraw(BAND)
+  expect(await shown(ui)).toContain('/clawd clean')
+  await clawd($, clock, 'clean')
+  await ui.redraw(BAND)
+  expect(await shown(ui)).toContain('Cleared 21')
+  expect(files[PATH]).toBe('# 2026-09-01\n\n## Todo\n- [ ] still open\n')
+  expect(files[NOTES]).toBe('# 2026-09-01\n\n## Notes\n- 09:05 kept\n')
+  await clawd($, clock, 'clean')
+  await ui.redraw(BAND)
+  expect(await shown(ui)).toContain('Nothing old')
+})

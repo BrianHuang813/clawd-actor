@@ -11,6 +11,8 @@ export const REMINDERS = 'Reminders'
 export const INBOX = 'Inbox' // kept like a day of its own, at the top of the file
 export const NOTES_FILE = 'clawd-notes.md'
 export const TODO_FILE = 'clawd-todo.md'
+export const KEEP_DAYS = 30 // /clawd clean leaves the days this recent alone
+export const CLEAN_HINT = 20 // finished lines to clean before /clawd list mentions it
 export const MAX_PICKS = 3 // suggestions a plan offers: as many as the bubble shows
 export const WARN_MIN = 5 // minutes before a reminder that Clawd first calls it out
 const DAY_MIN = 24 * 60
@@ -27,6 +29,7 @@ export type NoteAsk =
   | { kind: 'list'; of?: 'note' | 'todo' } // absent: today's list; note or todo: every open one, all days
   | { kind: 'notes' } // today's notes, read back
   | { kind: 'remind'; when: string; text: string }
+  | { kind: 'clean' } // drops what is finished from days before KEEP_DAYS ago
   | { kind: 'usage'; of: 'note' | 'todo' | 'plan' | 'done' | 'remind' } // the command, missing what it needs
 
 export type Item = { isDone: boolean; text: string }
@@ -46,10 +49,11 @@ const parseWhen = (rest: string): { when: string; text: string } | undefined => 
 
 /** The note command `text` asks for, or undefined when it is not one. */
 export const parseNotes = (text: string): NoteAsk | undefined => {
-  const m = /^(notes|note|todo|plan|done|list|remind)(?![\p{L}\p{N}_])\s*(.*)$/isu.exec(text.trim())
+  const m = /^(notes|note|todo|plan|done|list|remind|clean)(?![\p{L}\p{N}_])\s*(.*)$/isu.exec(text.trim())
   if (!m) return undefined
-  const cmd = m[1]!.toLowerCase() as 'notes' | 'note' | 'todo' | 'plan' | 'done' | 'list' | 'remind'
+  const cmd = m[1]!.toLowerCase() as 'notes' | 'note' | 'todo' | 'plan' | 'done' | 'list' | 'remind' | 'clean'
   const rest = m[2]!.trim()
+  if (cmd === 'clean') return rest ? undefined : { kind: 'clean' } // "clean up this function" is a chat
   if (cmd === 'list') {
     if (!rest) return { kind: 'list' }
     if (/^notes?$/i.test(rest)) return { kind: 'list', of: 'note' }
@@ -201,7 +205,13 @@ export const summary = (md: string, day: string, lang: Lang): string => {
   const todo = items(md, day, TODO).map((it, i) => `${i + 1}.${it.isDone ? '✓' : ''} ${it.text}`)
   const later = items(md, day, REMINDERS).filter(it => !it.isDone).map(it => it.text)
   const inbox = items(md, INBOX, TODO).filter(it => !it.isDone).map(it => it.text)
-  const parts = [todo.length ? s.today(todo.join(', ')) : s.noTodos, later.length ? s.later(later.join(', ')) : '', inbox.length ? s.todos(inbox.join(', ')) : '']
+  const earlier = openTodos(md, day).filter(c => c.from !== INBOX).length
+  const parts = [
+    todo.length ? s.today(todo.join(', ')) : s.noTodos,
+    later.length ? s.later(later.join(', ')) : '',
+    inbox.length ? s.todos(inbox.join(', ')) : '',
+    earlier ? s.earlier(earlier) : '',
+  ]
   return parts.filter(Boolean).join(' · ')
 }
 
@@ -341,4 +351,44 @@ export const splitNotebook = (md: string): { notes: string; todo: string } => {
     return text ? text + '\n' : ''
   }
   return { notes: tidy(out.notes), todo: tidy(out.todo) }
+}
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/
+/** A finished line: a ticked item, or a note taken on ("→ MM-DD"). */
+const isFinished = (l: string) => /^\s*- \[[xX]\] /.test(l) || (/^\s*- (?!\[)/.test(l) && TAKEN.test(l.trimEnd()))
+
+/**
+ * The file without what is finished in the inbox and in days before `cutoff`, and without the sections and
+ * days that leaves empty; open items and the person's own lines stay. `count` is the lines it dropped.
+ */
+export const sweep = (md: string, cutoff: string): { md: string; count: number } => {
+  const lines = split(md)
+  const isOld = (head: string) => head === INBOX || (DATE.test(head) && head < cutoff)
+  let head = ''
+  let count = 0
+  const kept = lines.filter(l => {
+    if (/^# /.test(l)) head = l.slice(2).trim()
+    const isGone = isOld(head) && isFinished(l)
+    if (isGone) count++
+    return !isGone
+  })
+  if (!count) return { md, count }
+  // drop the old headings with nothing under them but blank lines and empty headings
+  const out: string[] = []
+  head = ''
+  for (let i = 0; i < kept.length; i++) {
+    const l = kept[i]!
+    if (/^# /.test(l)) head = l.slice(2).trim()
+    if (/^#{1,2} /.test(l) && isOld(head)) {
+      const isDay = /^# /.test(l)
+      const end = scan(kept, i + 1, kept.length, x => (isDay ? /^# / : /^#{1,2} /).test(x))
+      if (kept.slice(i + 1, end).every(x => !x.trim() || /^## /.test(x))) {
+        i = end - 1
+        continue
+      }
+    }
+    out.push(l)
+  }
+  const text = out.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+  return { md: text ? text + '\n' : '', count }
 }

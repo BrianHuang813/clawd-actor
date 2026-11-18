@@ -126,12 +126,15 @@ remember earlier messages.
 | `/clawd list` | today's list, reminders still to come, and the todos waiting |
 | `/clawd list note` | every note not yet planned, from any day, newest first |
 | `/clawd list todo` | every open todo, from any day, newest first |
+| `/clawd clean` | clears finished lines older than 30 days: ticked todos and reminders, notes taken on |
 | `/clawd remind 14:00 standup` | a reminder for later today (also `30m`, `1h30m`, `14：00`, `30分`) |
 
 - **Reminders:** Clawd honks five minutes ahead and again when it is due, with a toast. They only
   work while Claude Code is open: they keep you on time while you code, they are not a calendar.
 - **Suggestions** come from Haiku, which picks only among todos and notes you wrote; when it does
   not answer, the oldest are offered. A note taken on gets `→ MM-DD` after it and is not offered again.
+- **Cleaning** never touches open todos, notes not yet planned, or your own lines, and only runs
+  when you ask; `/clawd list` mentions it once 20 old finished lines pile up.
 - **Languages:** commands are English, what you write can be anything; Clawd answers in Chinese
   when it is about Chinese text, in English otherwise.
 
