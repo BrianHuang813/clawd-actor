@@ -1,5 +1,5 @@
 import { test, expect, mock } from 'claude-code/testing'
-import { bubble, cells, clean, parseClawd } from '../hooks/chat'
+import { bubble, cells, clean, parseClawd, HELP } from '../hooks/chat'
 
 const BAND = { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 60 } as any
 const shown = async (ui: any) => (await ui.findAll({ type: 'Text' })).map((t: any) => t.text).join('\n')
@@ -121,4 +121,9 @@ test('the mods beneath keep their own row: the band is the engine\'s to share, n
   expect(rows.at(-1)).toBe(10) // maxRows is read-only: each plugin's row gets the whole band
   await ui.redraw({ ...BAND, maxRows: 3 })
   expect(await shown(ui)).toBe('below') // no room for the stage: Clawd stays out
+})
+
+test('the help fits the bubble at the widest stage, nothing cut off', () => {
+  expect(bubble(HELP, 60).join('\n')).not.toContain('…')
+  expect(HELP).toContain('/config')
 })
