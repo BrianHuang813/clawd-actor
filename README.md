@@ -7,8 +7,10 @@ hands out badges.
 
 ![Clawd as a detective in a fedora, magnifying glass in hand, pondering under a thought bubble; calling out 閃身步 and flash-stepping across the stage and back; and as a homemaker in a curly perm and apron, cooking at a pot that stays put](assets/demo.gif)
 
-> **New in 0.8:** [the notebook](#the-notebook) and [badges](#badges). Ten badges still need a
-> costume: [draw one and send it in](CONTRIBUTING.md#dress-clawd-for-a-badge).
+> **New in 0.9:** [the notebook](#the-notebook) keeps notes and todos in two files,
+> `/clawd plan` picks from notes of any day too, `/clawd list note` and `list todo` show every
+> open one, `/clawd clean` clears what is old and finished, and a few settings in `/config`.
+> Ten badges still need a costume: [draw one and send it in](CONTRIBUTING.md#dress-clawd-for-a-badge).
 
 - [Install](#install)
 - [The show](#the-show)
