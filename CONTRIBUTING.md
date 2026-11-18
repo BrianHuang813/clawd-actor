@@ -6,7 +6,8 @@ Bug reports, ideas and new scenes are welcome.
 say what you saw and what you expected, with your Claude Code version and terminal. A screenshot
 helps with anything drawn wrong.
 
-**Want to change something?** Send a pull request:
+**Want to change something?** Read [CLAUDE.md](CLAUDE.md) first: how the code is laid out and
+the rules that are easy to break (Claude Code reads it on its own). Then send a pull request:
 
 1. Fork the repository, clone your fork and make a branch for the change.
 2. Run Clawd from your clone. If you have the marketplace version installed, turn it off while you
