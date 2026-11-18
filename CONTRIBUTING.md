@@ -113,6 +113,21 @@ elements as exact rectangles; edit the font paths at its top for your system.
 
 ## Releasing (maintainers)
 
+Push to `main` as often as you like: CI runs, and nothing reaches anyone until the version is
+bumped. Releases are batched, so people are not asked to update for every small change.
+
+| Change | Version | When it goes out |
+| --- | --- | --- |
+| A bug that loses or garbles notebook data, breaks a command, or crashes the mod | patch | right away |
+| Any other bug fix | patch | with the next release, or on its own after a week |
+| A new command, setting, scene or badge, or a change to the notebook files' format | minor | batched: when the feature is done and checked in a real session |
+| Wording, help text, docs, tests, CI, refactors | none | with the next release |
+
+- At most one release a week, urgent fixes aside.
+- Before a release: CI is green on `main`, and the notes cover everything since the last tag
+  (`git log v0.9.2..HEAD --oneline`), with any change to the notebook files called out first.
+- A minor release also updates the README's **New in** line.
+
 1. Bump `version` in `.claude-plugin/plugin.json` in the commit that ships the change.
    `claude plugin update` and the update notice go by that number alone, so code merged without a
    bump never reaches anyone (a change to docs alone needs none).
