@@ -24,6 +24,10 @@ helps with anything drawn wrong.
    claude plugin test .
    ```
 
+   CI runs them on every push and pull request, but only the tests the change touches:
+   `tools/ci_tests.py` follows each test's imports, skips docs-only changes, and runs everything
+   for a file it cannot place. `git diff --name-only main | python3 tools/ci_tests.py` shows the pick.
+
 4. If the change shows in one of the GIFs, regenerate it (see below).
 5. Open a pull request against `main`. Say what changes on stage; a GIF or a few frames help.
    Leave `version` in `.claude-plugin/plugin.json` alone: it is bumped when a release goes out.

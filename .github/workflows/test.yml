@@ -1,0 +1,48 @@
+# Runs only the tests a change needs (tools/ci_tests.py): none for docs, all for anything it cannot place.
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pick the tests
+        id: pick
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # a new branch has no "before": run them all
+          if [ -z "$BASE" ] || [ "$BASE" = 0000000000000000000000000000000000000000 ] || ! git cat-file -e "$BASE^{commit}"; then
+            tests=ALL
+          else
+            tests=$(git diff --name-only "$BASE" HEAD | python3 tools/ci_tests.py)
+          fi
+          echo "$tests"
+          { echo 'tests<<EOF'; echo "$tests"; echo EOF; } >> "$GITHUB_OUTPUT"
+
+      - name: Install Claude Code
+        if: steps.pick.outputs.tests != ''
+        run: npm install -g @anthropic-ai/claude-code@2.1.327
+
+      - name: Validate the plugin
+        if: steps.pick.outputs.tests != ''
+        run: claude plugin validate .
+
+      - name: Run the picked tests
+        if: steps.pick.outputs.tests != ''
+        env:
+          TESTS: ${{ steps.pick.outputs.tests }}
+        run: |
+          # claude plugin test runs every test file under the folder: drop the ones not picked
+          if [ "$TESTS" != ALL ]; then
+            for t in tests/*.test.ts*; do grep -qxF "$t" <<< "$TESTS" || rm "$t"; done
+          fi
+          claude plugin test .
