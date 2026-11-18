@@ -1,7 +1,7 @@
 // /clawd note, notes, plan, done, list and remind: what they ask, and the markdown file they keep.
-// Pure functions only, like scenes.ts; what Clawd says about it is in say.ts. The file holds one `# YYYY-MM-DD` heading a day, with
-// `## Notes`, `## Todo` and `## Reminders` lists under it, so a person (or Claude) can read it too.
-// A `# Inbox` heading at the top holds the todos for some day, not yet picked for one.
+// Pure functions only, like scenes.ts; what Clawd says about it is in say.ts. Two files, each one `# YYYY-MM-DD` heading a day:
+// the notes file has a `## Notes` list under it, the todo file `## Todo` and `## Reminders`, so a person (or Claude) can read them.
+// A `# Inbox` heading at the top of the todo file holds the todos for some day, not yet picked for one.
 
 import { say, type Lang } from './say.ts'
 
@@ -9,9 +9,13 @@ export const NOTES = 'Notes'
 export const TODO = 'Todo'
 export const REMINDERS = 'Reminders'
 export const INBOX = 'Inbox' // kept like a day of its own, at the top of the file
+export const NOTES_FILE = 'clawd-notes.md'
+export const TODO_FILE = 'clawd-todo.md'
 export const MAX_PICKS = 3 // suggestions a plan offers: as many as the bubble shows
 export const WARN_MIN = 5 // minutes before a reminder that Clawd first calls it out
 const DAY_MIN = 24 * 60
+// ponytail: only the newest open notes go to Haiku, so the prompt stays small; older ones still show in /clawd list note
+const MAX_NOTE_CANDS = 20
 
 export type NoteAsk =
   | { kind: 'note'; text: string }
@@ -20,7 +24,7 @@ export type NoteAsk =
   | { kind: 'suggest' } // a lone plan: Clawd picks from the inbox and days past
   | { kind: 'accept'; picks?: number[] } // plan ok [1 3]: the suggestions taken, 1-based; absent, all
   | { kind: 'done'; n?: number } // the n-th of today's todos, 1-based; absent, the first open one
-  | { kind: 'list' }
+  | { kind: 'list'; of?: 'note' | 'todo' } // absent: today's list; note or todo: every open one, all days
   | { kind: 'notes' } // today's notes, read back
   | { kind: 'remind'; when: string; text: string }
   | { kind: 'usage'; of: 'note' | 'todo' | 'plan' | 'done' | 'remind' } // the command, missing what it needs
@@ -46,7 +50,12 @@ export const parseNotes = (text: string): NoteAsk | undefined => {
   if (!m) return undefined
   const cmd = m[1]!.toLowerCase() as 'notes' | 'note' | 'todo' | 'plan' | 'done' | 'list' | 'remind'
   const rest = m[2]!.trim()
-  if (cmd === 'list') return rest ? undefined : { kind: 'list' } // "list the files" is a chat
+  if (cmd === 'list') {
+    if (!rest) return { kind: 'list' }
+    if (/^notes?$/i.test(rest)) return { kind: 'list', of: 'note' }
+    if (/^todos?$/i.test(rest)) return { kind: 'list', of: 'todo' }
+    return undefined // "list the files" is a chat
+  }
   if (cmd === 'notes') return rest ? undefined : { kind: 'notes' } // "notes are handy" is a chat
   if (cmd === 'note') return rest ? { kind: 'note', text: rest } : { kind: 'usage', of: 'note' }
   if (cmd === 'todo') return rest ? { kind: 'todo', text: rest } : { kind: 'usage', of: 'todo' }
@@ -196,13 +205,65 @@ export const summary = (md: string, day: string, lang: Lang): string => {
   return parts.filter(Boolean).join(' · ')
 }
 
-/** An open todo that could go on today's list: from the inbox or a day before. */
-export type Candidate = { from: string; text: string }
+/** An open todo, or a note not yet planned, that could go on today's list. */
+export type Candidate = { from: string; text: string; isNote?: boolean }
+
+const TAKEN = / → \d{2}-\d{2}$/ // after a note planned for a day
+const TIME = /^\d{1,2}:\d{2}\s+/
+
+const dayHeads = (md: string) => split(md).flatMap(l => /^# (\d{4}-\d{2}-\d{2})\s*$/.exec(l)?.[1] ?? []).sort()
+
+/** The notes of every day up to `today` not yet planned, oldest first, their time left off. */
+export const openNotes = (notesMd: string, today: string): Candidate[] =>
+  dayHeads(notesMd)
+    .filter(d => d <= today)
+    .flatMap(from => noteLines(notesMd, from).filter(l => !TAKEN.test(l)).map(l => ({ from, text: l.replace(TIME, ''), isNote: true })))
+    .filter(c => c.text)
 
 /** Open todos left from days before `today`, oldest first, then the inbox's, in its order. */
-export const candidates = (md: string, today: string): Candidate[] => {
-  const days = split(md).flatMap(l => /^# (\d{4}-\d{2}-\d{2})\s*$/.exec(l)?.[1] ?? []).filter(d => d < today).sort()
-  return [...days, INBOX].flatMap(from => items(md, from, TODO).filter(it => !it.isDone).map(it => ({ from, text: it.text })))
+export const openTodos = (md: string, today: string): Candidate[] =>
+  [...dayHeads(md).filter(d => d < today), INBOX].flatMap(from => items(md, from, TODO).filter(it => !it.isDone).map(it => ({ from, text: it.text })))
+
+/** What /clawd plan picks from: the waiting todos, then the newest open notes. */
+export const candidates = (todoMd: string, notesMd: string, today: string): Candidate[] => [
+  ...openTodos(todoMd, today),
+  ...openNotes(notesMd, today).slice(-MAX_NOTE_CANDS),
+]
+
+/** What /clawd list note or list todo says: every open one, the newest first. */
+export const listAll = (of: 'note' | 'todo', todoMd: string, notesMd: string, today: string, lang: Lang): string => {
+  const s = say(lang)
+  const mmdd = (c: Candidate) => (c.from === today || c.from === INBOX ? c.text : `${c.from.slice(5)} ${c.text}`)
+  const all =
+    of === 'note'
+      ? openNotes(notesMd, today)
+      : [...openTodos(todoMd, today), ...items(todoMd, today, TODO).filter(it => !it.isDone).map(it => ({ from: today, text: it.text }))]
+  if (!all.length) return of === 'note' ? s.noOpenNotes : s.noOpenTodos
+  const list = [...all].reverse().map(mmdd).join(' · ')
+  return of === 'note' ? s.allNotes(all.length, list) : s.allTodos(all.length, list)
+}
+
+/** Every note line of `day`, as written. */
+const noteAt = (lines: string[], day: string) => {
+  const at = locate(lines, day, NOTES)
+  return at.head < 0 ? [] : Array.from({ length: at.end - at.head - 1 }, (_, k) => at.head + 1 + k)
+}
+
+/** The notes file with each of `taken`'s notes marked "→ MM-DD", and the notes it found to mark. */
+export const markNotes = (notesMd: string, today: string, taken: Candidate[]): { md: string; marked: Candidate[] } => {
+  const lines = split(notesMd)
+  const marked: Candidate[] = []
+  for (const c of taken) {
+    // found again by its text: the file may have changed since the suggestion
+    const i = noteAt(lines, c.from).find(k => {
+      const m = /^\s*- (.*)$/.exec(lines[k]!)
+      return m && !TAKEN.test(m[1]!.trim()) && m[1]!.trim().replace(TIME, '') === c.text
+    })
+    if (i === undefined) continue
+    lines[i] = `${lines[i]!.trimEnd()} → ${today.slice(5)}`
+    marked.push(c)
+  }
+  return { md: marked.length ? join(lines) : notesMd, marked }
 }
 
 /** Haiku's prompt for picking today's work out of `cands`, numbered from 1. */
@@ -210,12 +271,13 @@ export const pickPrompt = (cands: Candidate[], today: string, time: string, remi
   [
     `It is ${today}, ${time}. ${reminders.length ? `Today's reminders: ${reminders.join('; ')}.` : 'No meetings today.'}`,
     'Open todos (where each came from in brackets):',
-    ...cands.map((c, i) => `${i + 1}. [${c.from === INBOX ? 'inbox' : `left from ${c.from}`}] ${c.text}`),
+    ...cands.map((c, i) => `${i + 1}. [${c.isNote ? `note from ${c.from}` : c.from === INBOX ? 'inbox' : `left from ${c.from}`}] ${c.text}`),
   ].join('\n')
 
 export const PICK_SYSTEM = [
   `You help a programmer choose what to work on today. Choose at most ${MAX_PICKS} of the numbered todos:`,
   'favour ones left over from earlier days, anything urgent, and what fits around the reminders.',
+  'Notes are passing thoughts: pick one only when it is a job to do.',
   'Reply with JSON only: {"picks":[numbers],"why":"one short reason, 12 words at most, in the language of the todos"}',
 ].join(' ')
 
@@ -231,11 +293,16 @@ export const readPicks = (reply: string, count: number): { picks: number[]; why:
   return { picks: Array.from({ length: Math.min(MAX_PICKS, count) }, (_, i) => i), why: '' }
 }
 
-/** The file with `taken` added to today's todos and each ticked where it came from, "→ MM-DD" after it. */
+/** The todo file with `taken` added to today's todos, each todo ticked where it came from, "→ MM-DD" after it; notes are marked by markNotes. */
 export const takeOn = (md: string, today: string, taken: Candidate[]): { md: string; count: number } => {
   let out = md
   let count = 0
   for (const c of taken) {
+    if (c.isNote) {
+      out = addLines(out, today, TODO, [`- [ ] ${c.text}`])
+      count++
+      continue
+    }
     // found again by its text: the file may have changed since the suggestion
     const n = items(out, c.from, TODO).findIndex(it => !it.isDone && it.text === c.text)
     const ticked = n < 0 ? undefined : tick(out, c.from, TODO, n, ` → ${today.slice(5)}`)
@@ -244,4 +311,34 @@ export const takeOn = (md: string, today: string, taken: Candidate[]): { md: str
     count++
   }
   return { md: out, count }
+}
+
+/**
+ * The one-file notebook of 0.8 split in two: the `## Notes` sections, and anything else of a day
+ * that is not under a section, stay in the notes file; Todo, Reminders and the inbox go to the todo file.
+ */
+export const splitNotebook = (md: string): { notes: string; todo: string } => {
+  const out = { notes: [] as string[], todo: [] as string[] }
+  const headed = { notes: '', todo: '' } // the day heading each was last given
+  let [head, sect] = ['', '']
+  for (const l of split(md)) {
+    if (/^# /.test(l)) [head, sect] = [l.trim(), '']
+    else if (/^## /.test(l)) sect = l.slice(3).trim()
+    if (/^# /.test(l)) continue // given lazily, so a day with no notes has no heading there
+    const to = sect && sect !== NOTES ? 'todo' : 'notes'
+    if (!l.trim()) {
+      if (headed[to] === head) out[to].push(l) // a blank line never makes a heading of its own
+      continue
+    }
+    if (head && headed[to] !== head) {
+      out[to].push('', head, '')
+      headed[to] = head
+    }
+    out[to].push(l)
+  }
+  const tidy = (ls: string[]) => {
+    const text = ls.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+    return text ? text + '\n' : ''
+  }
+  return { notes: tidy(out.notes), todo: tidy(out.todo) }
 }

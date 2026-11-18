@@ -2,7 +2,8 @@ import { test, expect, mock } from 'claude-code/testing'
 
 const BAND = { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 60 } as any
 const shown = async (ui: any) => (await ui.findAll({ type: 'Text' })).map((t: any) => t.text).join('\n')
-const PATH = '/home/me/.claude/clawd-notes.md'
+const PATH = '/home/me/.claude/clawd-todo.md'
+const NOTES = '/home/me/.claude/clawd-notes.md'
 const TEN = new Date(2026, 10, 14, 10, 0).getTime() // 10:00 local, the day the tests run on
 
 /** A session at 10:00 with the notebook in memory (`files`); returns the clock, the band, the toasts and the files. */
@@ -40,7 +41,8 @@ test('/clawd note, plan, done and list keep the day in the markdown notebook', a
   await clawd($, clock, 'note ask PM about the field')
   await clawd($, clock, 'plan write tests; ship it')
   await clawd($, clock, 'done')
-  expect(files[PATH]).toBe('# 2026-11-14\n\n## Notes\n- 10:00 ask PM about the field\n\n## Todo\n- [x] write tests\n- [ ] ship it\n')
+  expect(files[NOTES]).toBe('# 2026-11-14\n\n## Notes\n- 10:00 ask PM about the field\n')
+  expect(files[PATH]).toBe('# 2026-11-14\n\n## Todo\n- [x] write tests\n- [ ] ship it\n')
   await ui.redraw(BAND)
   expect(await shown(ui)).toContain('1 to go')
 
@@ -58,9 +60,9 @@ test('/clawd note, plan, done and list keep the day in the markdown notebook', a
 
 test('what the person wrote in the notebook stays put', async ($, on) => {
   const mine = '# 2026-11-13\n\nmy own thoughts\n'
-  const { clock, files } = await start($, on, { [PATH]: mine })
+  const { clock, files } = await start($, on, { [NOTES]: mine })
   await clawd($, clock, 'note hi')
-  expect(files[PATH]!.startsWith(mine)).toBe(true)
+  expect(files[NOTES]!.startsWith(mine)).toBe(true)
 })
 
 test('a reminder is called out 5 minutes ahead and when due, then ticked off', { timeoutMs: 30_000 }, async ($, on) => {
@@ -82,7 +84,7 @@ test('a reminder is called out 5 minutes ahead and when due, then ticked off', {
 
 test('every reminder due is called out, missed ones with their time', async ($, on) => {
   const md = '# 2026-11-14\n\n## Reminders\n- [ ] 08:00 coffee\n- [ ] 9:00 standup\n'
-  const { clock, toasts, files } = await start($, on, { '/home/me/.claude/clawd-notes.md': md })
+  const { clock, toasts, files } = await start($, on, { [PATH]: md })
   await clock.advance(30_000)
   expect(toasts).toEqual(['Clawd: Missed at 08:00: coffee · Missed at 09:00: standup'])
   expect(files[PATH]).toContain('- [x] 08:00 coffee\n- [x] 9:00 standup')
@@ -102,7 +104,7 @@ test('a note that cleans down to nothing is not written', async ($, on) => {
   await clawd($, clock, 'note \u0001')
   await ui.redraw(BAND)
   expect(await shown(ui)).toContain('came out empty')
-  expect(files[PATH]).toBeUndefined()
+  expect(files[NOTES]).toBeUndefined()
 })
 
 test('a reminder for a time already past is refused, and nothing is written', async ($, on) => {
@@ -127,11 +129,12 @@ test('a turn opens with the next todo in a bubble, at most every half hour', asy
 })
 
 test('a notebook that will not open says so instead of writing over it', async ($, on) => {
-  const { clock, ui, files } = await start($, on, { [PATH]: 'x' }, true)
+  const { clock, ui, files } = await start($, on, { [NOTES]: 'x' }, true)
   await clawd($, clock, 'note hi')
   await ui.redraw(BAND)
   expect(await shown(ui)).toContain('notebook will not open')
-  expect(files[PATH]).toBe('x')
+  expect(files[NOTES]).toBe('x')
+  expect(files[PATH]).toBeUndefined()
 })
 
 test('/clawd todo saves for later; /clawd plan offers picks from it and plan ok takes them on', async ($, on) => {
@@ -184,4 +187,41 @@ test('a Chinese note, reminder and list get Chinese answers; the file keeps its 
   expect(await shown(ui)).toContain('今天還沒有待辦')
   await clock.set(TEN + 5 * 60_000 + 5000)
   expect(toasts).toEqual(['Clawd: 5 分鐘後：站會'])
+})
+
+test('a 0.8 notebook with todos in it is split in two, once, nothing lost', async ($, on) => {
+  const old = '# Inbox\n\n## Todo\n- [ ] someday\n\n# 2026-11-13\n\nmy own line\n\n## Notes\n- 09:00 ask PM\n\n## Todo\n- [ ] left over\n\n## Reminders\n- [x] 14:00 standup\n'
+  const { clock, files } = await start($, on, { [NOTES]: old })
+  await clawd($, clock, 'list')
+  expect(files[NOTES]).toBe('# 2026-11-13\n\nmy own line\n\n## Notes\n- 09:00 ask PM\n')
+  expect(files[PATH]).toBe('# Inbox\n\n## Todo\n- [ ] someday\n\n# 2026-11-13\n\n## Todo\n- [ ] left over\n\n## Reminders\n- [x] 14:00 standup\n')
+})
+
+test('plan picks from notes of days past too; a note taken is marked and not offered again', async ($, on) => {
+  const { clock, ui, files, asks } = await start($, on, { [NOTES]: '# 2026-11-12\n\n## Notes\n- 09:00 ask PM about the field\n' }, false, '{"picks":[1]}')
+  await clawd($, clock, 'plan')
+  expect(asks[0].prompt).toContain('1. [note from 2026-11-12] ask PM about the field')
+  await clawd($, clock, 'plan ok')
+  expect(files[NOTES]).toContain('- 09:00 ask PM about the field → 11-14')
+  expect(files[PATH]).toBe('# 2026-11-14\n\n## Todo\n- [ ] ask PM about the field\n')
+  await clawd($, clock, 'plan')
+  await ui.redraw(BAND)
+  expect(await shown(ui)).toContain('Nothing waiting')
+})
+
+test('list note and list todo show every open one, from all days, newest first', async ($, on) => {
+  const notes = '# 2026-11-12\n\n## Notes\n- 09:00 old idea\n- 09:05 taken one → 11-13\n\n# 2026-11-14\n\n## Notes\n- 09:30 fresh idea\n'
+  const todo = '# Inbox\n\n## Todo\n- [ ] someday\n\n# 2026-11-13\n\n## Todo\n- [ ] left over\n- [x] done one\n'
+  const { clock, ui } = await start($, on, { [NOTES]: notes, [PATH]: todo })
+  await clawd($, clock, 'list note')
+  await ui.redraw(BAND)
+  const n = await shown(ui)
+  expect(n).toContain('2 notes')
+  expect(n.indexOf('fresh idea')).toBeLessThan(n.indexOf('11-12 old idea'))
+  expect(n).not.toContain('taken one')
+  await clawd($, clock, 'list todos')
+  await ui.redraw(BAND)
+  const t = await shown(ui)
+  expect(t).toContain('2 open todos')
+  expect(t.indexOf('someday')).toBeLessThan(t.indexOf('11-13 left over'))
 })

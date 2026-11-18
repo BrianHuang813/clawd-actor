@@ -4,7 +4,7 @@ import type { EngineInterface as Engine, Register } from 'claude-code'
 import { bubble, clean, holdFrames, parseClawd, persona, HELP } from './chat'
 import { langOf, say, type Lang } from './say'
 import { cheer, earned, onTurn, readGot, readStats, shelf, type Stats } from './badges'
-import { addLines, candidates, dayKey, dueReminders, hhmm, items, minuteOf, noteLines, pickPrompt, readPicks, resolveAt, summary, takeOn, tick as tickItem, INBOX, NOTES, PICK_SYSTEM, REMINDERS, TODO, WARN_MIN, type Candidate, type NoteAsk } from './notes'
+import { addLines, candidates, dayKey, dueReminders, hhmm, items, listAll, markNotes, minuteOf, noteLines, pickPrompt, readPicks, resolveAt, splitNotebook, summary, takeOn, tick as tickItem, INBOX, NOTES, NOTES_FILE, PICK_SYSTEM, REMINDERS, TODO, TODO_FILE, WARN_MIN, type Candidate, type NoteAsk } from './notes'
 import { ACT_FRAMES, FRAME_MS, frameGrid, frameRows, H, hold, rewardScene, SIXSEVEN_FRAMES, type Mode, type Shown } from './scenes'
 import { gridToSvg } from './svg'
 
@@ -89,20 +89,39 @@ const react = async ($: Engine, scene: string | undefined, say?: string, frames 
   return tick($)
 }
 
-/** The notebook: ~/.claude/clawd-notes.md. */
-const notesPath = async ($: Engine) => {
+type NoteFile = typeof NOTES_FILE | typeof TODO_FILE
+/** A notebook file: ~/.claude/clawd-notes.md or ~/.claude/clawd-todo.md. */
+const notesPath = async ($: Engine, file: NoteFile) => {
   const home = (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE'))
   if (!home) throw new Error('no HOME to keep it in')
-  return `${home}/.claude/clawd-notes.md`
+  return `${home}/.claude/${file}`
+}
+
+/** Only a missing file reads as empty: a read that fails must not be written over. */
+const readFile = async ($: Engine, path: string) => ((await $.fs.exists(path)) ? String(await $.fs.read(path)) : '')
+
+/** Before 0.9 the todos lived in the notes file too: moves them out once, the todo file written first so nothing is lost. */
+const migrate = async ($: Engine) => {
+  const [notesAt, todoAt] = [await notesPath($, NOTES_FILE), await notesPath($, TODO_FILE)]
+  if (await $.fs.exists(todoAt)) return
+  const md = await readFile($, notesAt)
+  const { notes, todo } = splitNotebook(md)
+  if (!todo) return
+  await $.fs.write(todoAt, todo)
+  await $.fs.write(notesAt, notes)
 }
 
 let notebook: Promise<unknown> = Promise.resolve() // edits one at a time, so none is lost to another
-/** Reads the notebook, writes what `change` makes of it (undefined: leave it), and resolves the text it ends with. */
-const edit = ($: Engine, change: (md: string) => string | undefined = () => undefined): Promise<string> => {
+let migrated: Promise<void> | undefined
+/** Reads a notebook file, writes what `change` makes of it (undefined: leave it), and resolves the text it ends with. */
+const edit = ($: Engine, file: NoteFile, change: (md: string) => string | undefined = () => undefined): Promise<string> => {
   const run = notebook.then(async () => {
-    const path = await notesPath($)
-    // only a missing file reads as empty: a read that fails must not be written over
-    const md = (await $.fs.exists(path)) ? String(await $.fs.read(path)) : ''
+    await (migrated ??= migrate($).catch(err => {
+      migrated = undefined // tried again on the next edit
+      throw err
+    }))
+    const path = await notesPath($, file)
+    const md = await readFile($, path)
     const next = change(md)
     if (next !== undefined && next !== md) await $.fs.write(path, next)
     return next ?? md
@@ -110,6 +129,8 @@ const edit = ($: Engine, change: (md: string) => string | undefined = () => unde
   notebook = run.catch(() => undefined)
   return run
 }
+/** Both files' text, for the language Clawd answers in. */
+const notebookText = async ($: Engine) => (await edit($, NOTES_FILE).catch(() => '')) + (await edit($, TODO_FILE).catch(() => ''))
 
 let perks: ReadonlySet<string> = new Set() // the badges earned, which dress Clawd in their rewards
 let counting: Promise<unknown> = Promise.resolve() // one count at a time, so none is lost to another
@@ -131,7 +152,7 @@ const tally = ($: Engine, change: (s: Stats) => Stats) => {
   $.clock.after(1, async () => {
     const fresh = await run.catch(() => [])
     if (!fresh.length) return
-    const line = cheer(fresh, langOf(await edit($).catch(() => '')))
+    const line = cheer(fresh, langOf(await notebookText($)))
     $.ui.toast(`Clawd: ${line}`, { timeoutMs: 15_000 })
     // a badge with a costume shows it off in its scene; any other, under the disco ball
     await react($, fresh.map(b => rewardScene(b.id)).find(Boolean) ?? 'disco', line, holdFrames(line))
@@ -149,7 +170,7 @@ const loadPerks = async ($: Engine) => {
 
 /** What /clawd badges shows: the badges earned and the closest one to go. */
 const showBadges = async ($: Engine) => {
-  const lang = langOf(await edit($).catch(() => ''))
+  const lang = langOf(await notebookText($))
   let line: string
   try {
     line = shelf(readStats(await $.store.get('stats')), readGot(await $.store.get('badges')), lang)
@@ -163,11 +184,11 @@ let turnStartedAt = 0 // for the marathon badge: lost on a reload, so a reloaded
 
 let suggested: Candidate[] = [] // what the last /clawd plan offered, for /clawd plan ok
 
-/** Asks Haiku which of the open todos to take on today, and offers them in the bubble. */
+/** Asks Haiku which of the open todos and notes to take on today, and offers them in the bubble. */
 const suggest = async ($: Engine, now: Date, id: number, lang: Lang) => {
   const day = dayKey(now)
-  const md = await edit($)
-  const cands = candidates(md, day)
+  const md = await edit($, TODO_FILE)
+  const cands = candidates(md, await edit($, NOTES_FILE), day)
   if (!cands.length) {
     suggested = []
     return say(lang).nothingWaiting
@@ -192,7 +213,7 @@ const USAGE = { note: 'usageNote', todo: 'usageTodo', plan: 'usagePlan', done: '
 /** The language Clawd answers a note command in: its text's, or the notebook's when it has none. */
 const langFor = async ($: Engine, ask: NoteAsk) => {
   const text = ask.kind === 'plan' ? ask.items.join(' ') : 'text' in ask ? ask.text : ''
-  return langOf(text || (await edit($).catch(() => '')))
+  return langOf(text || (await notebookText($)))
 }
 
 /** Does what a note command asks and says so in Clawd's bubble. */
@@ -209,11 +230,11 @@ const keepNotes = async ($: Engine, ask: NoteAsk) => {
     const texts = ask.kind === 'plan' ? ask.items.map(clean) : 'text' in ask ? [clean(ask.text)] : []
     if (texts.some(t => !t)) [scene, line] = ['wave', s.empty]
     else if (ask.kind === 'note') {
-      await edit($, md => addLines(md, day, NOTES, [`- ${hhmm(minuteOf(now))} ${clean(ask.text)}`]))
+      await edit($, NOTES_FILE, md => addLines(md, day, NOTES, [`- ${hhmm(minuteOf(now))} ${clean(ask.text)}`]))
       line = s.noted
       tally($, st => ({ ...st, notes: st.notes + 1 }))
     } else if (ask.kind === 'todo') {
-      await edit($, md => addLines(md, INBOX, TODO, [`- [ ] ${clean(ask.text)}`]))
+      await edit($, TODO_FILE, md => addLines(md, INBOX, TODO, [`- [ ] ${clean(ask.text)}`]))
       line = s.savedLater
     } else if (ask.kind === 'suggest') {
       await react($, 'ponder', '· · ·', WAIT_FRAMES)
@@ -225,8 +246,14 @@ const keepNotes = async ($: Engine, ask: NoteAsk) => {
       if (!taken.length) [scene, line] = ['wave', suggested.length ? s.badPicks : s.askFirst]
       else {
         let count = 0
-        await edit($, md => {
-          const r = takeOn(md, day, taken)
+        let notes: Candidate[] = []
+        await edit($, NOTES_FILE, md => {
+          const r = markNotes(md, day, taken.filter(c => c.isNote))
+          notes = r.marked
+          return r.md
+        })
+        await edit($, TODO_FILE, md => {
+          const r = takeOn(md, day, [...taken.filter(c => !c.isNote), ...notes])
           count = r.count
           return r.md
         })
@@ -234,13 +261,13 @@ const keepNotes = async ($: Engine, ask: NoteAsk) => {
         ;[scene, line] = count ? ['chalk', s.taken(count)] : ['wave', s.takenAlready]
       }
     } else if (ask.kind === 'plan') {
-      await edit($, md => addLines(md, day, TODO, ask.items.map(i => `- [ ] ${clean(i)}`)))
+      await edit($, TODO_FILE, md => addLines(md, day, TODO, ask.items.map(i => `- [ ] ${clean(i)}`)))
       ;[scene, line] = ['chalk', s.planned(ask.items.length)]
     } else if (ask.kind === 'remind') {
       const at = resolveAt(ask.when, now)
       if (typeof at === 'string') [scene, line] = ['wave', at === 'notTime' || at === 'passed' ? s[at](ask.when) : s[at]]
       else {
-        await edit($, md => addLines(md, day, REMINDERS, [`- [ ] ${hhmm(at)} ${clean(ask.text)}`]))
+        await edit($, TODO_FILE, md => addLines(md, day, REMINDERS, [`- [ ] ${hhmm(at)} ${clean(ask.text)}`]))
         // set inside the warning window: just said, so only the call when due is left
         if (at - minuteOf(now) <= WARN_MIN) warned.add(`${day} ${at} ${clean(ask.text)}`)
         tally($, st => ({ ...st, reminders: st.reminders + 1 }))
@@ -248,7 +275,7 @@ const keepNotes = async ($: Engine, ask: NoteAsk) => {
       }
     } else if (ask.kind === 'done') {
       let [isTicked, isCleared] = [false, false]
-      await edit($, md => {
+      await edit($, TODO_FILE, md => {
         const todo = items(md, day, TODO)
         const n = ask.n ? ask.n - 1 : todo.findIndex(t => !t.isDone)
         if (!todo[n]) return void ([scene, line] = ['wave', ask.n ? s.noTodo(ask.n) : s.nothingLeft])
@@ -261,9 +288,10 @@ const keepNotes = async ($: Engine, ask: NoteAsk) => {
       })
       if (isTicked) tally($, st => ({ ...st, todosDone: st.todosDone + 1, clearDays: st.clearDays + (isCleared ? 1 : 0) }))
     } else if (ask.kind === 'notes') {
-      const notes = noteLines(await edit($), day)
+      const notes = noteLines(await edit($, NOTES_FILE), day)
       ;[scene, line] = ['think', notes.length ? s.notes(notes.join(' · ')) : s.noNotes]
-    } else [scene, line] = ['think', summary(await edit($), day, lang)]
+    } else if (ask.of) [scene, line] = ['think', listAll(ask.of, await edit($, TODO_FILE), await edit($, NOTES_FILE), day, lang)]
+    else [scene, line] = ['think', summary(await edit($, TODO_FILE), day, lang)]
   } catch (err) {
     ;[scene, line] = ['wave', s.noNotebook(err instanceof Error ? err.message : String(err))]
   }
@@ -278,7 +306,7 @@ const remind = async ($: Engine) => {
   const min = minuteOf(now)
   const calls: string[] = []
   try {
-    await edit($, md => {
+    await edit($, TODO_FILE, md => {
       let out = md
       for (const due of dueReminders(md, day, min)) {
         const key = `${day} ${due.at} ${due.text}`
@@ -311,7 +339,7 @@ const nudge = async ($: Engine) => {
   nudgedAt = now // read the notebook at most every NUDGE_MS, todos or not
   let md: string
   try {
-    md = await edit($)
+    md = await edit($, TODO_FILE)
   } catch {
     return
   }
@@ -360,7 +388,7 @@ export const register: Register = on => {
       return isTurnRunning || isReacting ? tick($) : undefined
     })
     // last, so the timers run whatever happens here; immediate: /clawd runs mid-turn instead of waiting
-    await $.command.register({ name: 'clawd', description: 'Pet, feed or wave at Clawd, or say something to it', argumentHint: '[pet|feed|wave|dance|shift|67|note|notes|todo|plan|done|list|remind|message]', immediate: true })
+    await $.command.register({ name: 'clawd', description: 'Pet, feed or wave at Clawd, or say something to it', argumentHint: '[pet|feed|wave|dance|shift|67|note|notes|todo|plan|done|list [note|todo]|remind|message]', immediate: true })
     return r
   })
 

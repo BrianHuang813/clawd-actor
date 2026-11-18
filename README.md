@@ -120,26 +120,39 @@ remember earlier messages.
 | `/clawd notes` | reads back today's notes |
 | `/clawd todo <text>` | saves a todo for some day |
 | `/clawd plan a; b; c` | puts todos on today's list |
-| `/clawd plan` | Clawd suggests up to three of your waiting todos for today |
+| `/clawd plan` | Clawd suggests up to three of your waiting todos and notes for today |
 | `/clawd plan ok [1 3]` | takes the suggestions on (all, or the numbered ones) |
 | `/clawd done [n]` | ticks off todo `n`, or the next one |
 | `/clawd list` | today's list, reminders still to come, and the todos waiting |
+| `/clawd list note` | every note not yet planned, from any day, newest first |
+| `/clawd list todo` | every open todo, from any day, newest first |
 | `/clawd remind 14:00 standup` | a reminder for later today (also `30m`, `1h30m`, `14：00`, `30分`) |
 
 - **Reminders:** Clawd honks five minutes ahead and again when it is due, with a toast. They only
   work while Claude Code is open: they keep you on time while you code, they are not a calendar.
-- **Suggestions** come from Haiku, which picks only among todos you wrote; when it does not
-  answer, the oldest are offered.
+- **Suggestions** come from Haiku, which picks only among todos and notes you wrote; when it does
+  not answer, the oldest are offered. A note taken on gets `→ MM-DD` after it and is not offered again.
 - **Languages:** commands are English, what you write can be anything; Clawd answers in Chinese
   when it is about Chinese text, in English otherwise.
 
-Everything goes to `~/.claude/clawd-notes.md`, a plain markdown file you can edit, or ask Claude
-to plan your day from:
+Notes go to `~/.claude/clawd-notes.md`, todos and reminders to `~/.claude/clawd-todo.md`: plain
+markdown files you can edit, or ask Claude to plan your day from. A notebook from before 0.9, with
+todos in the notes file, is split in two the first time Clawd opens it.
 
 <details>
-<summary>What the file looks like</summary>
+<summary>What the files look like</summary>
 
 ```markdown
+<!-- clawd-notes.md -->
+# 2026-11-14
+
+## Notes
+- 10:32 ask PM about the field definitions → 11-14
+- 11:05 the retry loop could back off
+```
+
+```markdown
+<!-- clawd-todo.md -->
 # Inbox
 
 ## Todo
@@ -148,12 +161,10 @@ to plan your day from:
 
 # 2026-11-14
 
-## Notes
-- 10:32 ask PM about the field definitions
-
 ## Todo
 - [x] write the tests
 - [ ] reply to PM
+- [ ] ask PM about the field definitions
 
 ## Reminders
 - [ ] 14:00 standup

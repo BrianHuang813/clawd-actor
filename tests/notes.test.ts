@@ -1,6 +1,6 @@
 import { test, expect } from 'claude-code/testing'
 import { langOf } from '../hooks/say'
-import { addLines, candidates, dueReminders, items, noteLines, parseNotes, readPicks, resolveAt, summary, takeOn, tick, INBOX, NOTES, REMINDERS, TODO } from '../hooks/notes'
+import { addLines, candidates, listAll, markNotes, splitNotebook, dueReminders, items, noteLines, parseNotes, readPicks, resolveAt, summary, takeOn, tick, INBOX, NOTES, REMINDERS, TODO } from '../hooks/notes'
 
 const DAY = '2026-11-14'
 const at = (h: number, m: number) => new Date(2026, 10, 14, h, m)
@@ -17,6 +17,8 @@ test('note commands parse; anything else is left to chat', () => {
   expect(parseNotes('done')).toEqual({ kind: 'done' })
   expect(parseNotes('done 2')).toEqual({ kind: 'done', n: 2 })
   expect(parseNotes('list')).toEqual({ kind: 'list' })
+  expect(parseNotes('list note')).toEqual({ kind: 'list', of: 'note' })
+  expect(parseNotes('LIST todos')).toEqual({ kind: 'list', of: 'todo' })
   expect(parseNotes('notes')).toEqual({ kind: 'notes' })
   expect(parseNotes('remind 14:00 standup')).toEqual({ kind: 'remind', when: '14:00', text: 'standup' })
   expect(parseNotes('remind 1h30m call back')).toEqual({ kind: 'remind', when: '1h30m', text: 'call back' })
@@ -103,7 +105,7 @@ test('the inbox sits at the top; candidates are days past, oldest first, then th
   md = addLines(md, INBOX, TODO, ['- [ ] someday'])
   md = addLines(md, DAY, TODO, ['- [ ] today'])
   expect(md.startsWith(`# ${INBOX}\n\n## ${TODO}\n- [ ] someday\n\n# 2026-11-13`)).toBe(true)
-  expect(candidates(md, DAY)).toEqual([{ from: '2026-11-13', text: 'left over' }, { from: INBOX, text: 'someday' }])
+  expect(candidates(md, '', DAY)).toEqual([{ from: '2026-11-13', text: 'left over' }, { from: INBOX, text: 'someday' }])
   expect(summary(md, DAY, 'en')).toBe('Today: 1. today · Todo: someday (/clawd plan to pick)')
 })
 
@@ -117,7 +119,7 @@ test("Haiku's picks are read safely, and the oldest stand in when they do not ho
 test('taking todos on moves them to today and ticks where they came from, once', () => {
   let md = addLines('', '2026-11-13', TODO, ['- [ ] left over'])
   md = addLines(md, INBOX, TODO, ['- [ ] someday'])
-  const taken = candidates(md, DAY)
+  const taken = candidates(md, '', DAY)
   const r = takeOn(md, DAY, taken)
   expect(r.count).toBe(2)
   expect(items(r.md, INBOX, TODO)).toEqual([{ isDone: true, text: 'someday → 11-14' }])
@@ -132,4 +134,23 @@ test('Clawd answers in Chinese when what it is about is Chinese', () => {
   expect(langOf('ask PM')).toBe('en')
   const md = addLines('', DAY, TODO, ['- [ ] 寫測試'])
   expect(summary(md, DAY, 'zh')).toBe('今天：1. 寫測試')
+})
+
+test('notes taken on a plan are marked once and left out after', () => {
+  const notes = addLines('', '2026-11-13', NOTES, ['- 09:00 ask PM', '- 09:05 a thought'])
+  const cands = candidates('', notes, DAY)
+  expect(cands).toEqual([{ from: '2026-11-13', text: 'ask PM', isNote: true }, { from: '2026-11-13', text: 'a thought', isNote: true }])
+  const r = markNotes(notes, DAY, [cands[0]!])
+  expect(r.marked.length).toBe(1)
+  expect(r.md).toContain('- 09:00 ask PM → 11-14')
+  expect(candidates('', r.md, DAY).map(c => c.text)).toEqual(['a thought'])
+  expect(markNotes(r.md, DAY, [cands[0]!]).marked).toEqual([]) // marked already
+  expect(takeOn('', DAY, r.marked).md).toBe(`# ${DAY}\n\n## ${TODO}\n- [ ] ask PM\n`)
+  expect(listAll('note', '', '', DAY, 'en')).toContain('No notes waiting')
+})
+
+test('splitting a notebook with nothing but notes leaves no todo file', () => {
+  const md = addLines('', DAY, NOTES, ['- 10:00 hi'])
+  expect(splitNotebook(md)).toEqual({ notes: md, todo: '' })
+  expect(splitNotebook('')).toEqual({ notes: '', todo: '' })
 })

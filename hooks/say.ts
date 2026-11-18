@@ -27,7 +27,7 @@ const EN = {
   doneLeft: (text: string, left: number) => `Done: ${text}! ${left} to go.`,
   allDone: 'All done today!',
   noNotebook: (why: string) => `My notebook will not open: ${why}`,
-  nothingWaiting: 'Nothing waiting. /clawd todo <text> saves one for later.',
+  nothingWaiting: 'Nothing waiting. /clawd todo or /clawd note saves one for later.',
   offer: (list: string, why: string) => `${list} — /clawd plan ok to take them${why ? ` (${why})` : ''}`,
   badPicks: 'Those numbers are not on my list.',
   askFirst: 'Ask me first: /clawd plan',
@@ -43,6 +43,10 @@ const EN = {
   noNotes: 'No notes today. /clawd note <text> jots one.',
   later: (list: string) => `Later: ${list}`,
   todos: (list: string) => `Todo: ${list} (/clawd plan to pick)`,
+  allNotes: (n: number, list: string) => `${n} notes not planned yet, newest first: ${list}`,
+  noOpenNotes: 'No notes waiting. /clawd note <text> jots one.',
+  allTodos: (n: number, list: string) => `${n} open todos, newest first: ${list}`,
+  noOpenTodos: 'No open todos. /clawd todo <text> saves one.',
 }
 
 const ZH: typeof EN = {
@@ -66,7 +70,7 @@ const ZH: typeof EN = {
   doneLeft: (text, left) => `完成：${text}！還剩 ${left} 項。`,
   allDone: '今天全部完成！',
   noNotebook: why => `筆記本打不開：${why}`,
-  nothingWaiting: '目前沒有待辦，用 /clawd todo <內容> 先存起來。',
+  nothingWaiting: '目前沒有待辦或筆記，用 /clawd todo 或 /clawd note 先存起來。',
   offer: (list, why) => `${list} — /clawd plan ok 收下${why ? `（${why}）` : ''}`,
   badPicks: '清單上沒有這些編號。',
   askFirst: '先用 /clawd plan 讓我挑一挑。',
@@ -82,6 +86,10 @@ const ZH: typeof EN = {
   noNotes: '今天還沒有筆記，/clawd note <內容> 記一筆。',
   later: list => `稍後：${list}`,
   todos: list => `待辦：${list}（/clawd plan 來挑）`,
+  allNotes: (n, list) => `${n} 則筆記還沒排進計畫，新的在前：${list}`,
+  noOpenNotes: '沒有待排的筆記，/clawd note <內容> 記一筆。',
+  allTodos: (n, list) => `${n} 項待辦還沒完成，新的在前：${list}`,
+  noOpenTodos: '沒有未完成的待辦，/clawd todo <內容> 存一項。',
 }
 
 /** Clawd's lines in `lang`. */
