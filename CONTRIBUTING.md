@@ -124,7 +124,8 @@ bumped. Releases are batched, so people are not asked to update for every small 
 | Docs, tests, CI | none | with the next release; they do not count toward the five |
 
 - Count the small changes since the last tag: the `fix:`, `feat:`, `refactor:` and `perf:`
-  commits (`git log $(git describe --tags --abbrev=0)..HEAD --oneline`).
+  commits (`git fetch --tags && git log $(git describe --tags --abbrev=0)..HEAD --oneline`; the
+  fetch matters, as `gh release create` makes the tag on GitHub only).
 - Before a release: CI is green on `main`, and the notes cover everything since the last tag,
   with any change to the notebook files called out first.
 - A minor release also updates the README's **New in** line.
