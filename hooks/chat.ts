@@ -6,11 +6,11 @@ import { parseNotes, type NoteAsk } from './notes.ts'
 
 /** `/clawd <word>` actions: free and instant, no model call. Each names the scene it plays. */
 export const ACTIONS: Record<string, string> = { pet: 'pet', feed: 'feed', wave: 'wave', hi: 'wave', hello: 'wave', dance: 'disco', shift: 'shift', 閃身步: 'shift', '67': 'sixseven', sixseven: 'sixseven' }
-export const HELP = 'Try /clawd pet, feed, wave, dance, shift, 67; note, todo, plan, done, list [note|todo], remind, clean; badges; or just talk to me! Settings: /config'
+export const HELP = 'Try /clawd pet, feed, wave, dance, shift, 67; note, todo, plan, done, list [note|todo], remind, clean; book; badges; or just talk to me! Settings: /config'
 const MAX_ASK = 500 // characters of a message passed on to the model
 const MAX_LINES = 3 // of text in the bubble
 
-export type Ask = { help: true } | { action: string } | { badges: true } | { notes: NoteAsk } | { chat: string }
+export type Ask = { help: true } | { action: string } | { badges: true } | { book: true } | { notes: NoteAsk } | { chat: string }
 
 /** A lone action word plays that action; a note command (note, todo, plan, done, list, remind, clean) keeps the notebook; anything else is a chat message. */
 export const parseClawd = (args: string): Ask => {
@@ -20,6 +20,7 @@ export const parseClawd = (args: string): Ask => {
   const action = Object.hasOwn(ACTIONS, word) ? ACTIONS[word] : undefined // not what every object inherits
   if (action) return { action }
   if (word === 'badges' || word === 'badge') return { badges: true }
+  if (word === 'book') return { book: true } // the notebook in a pane
   const notes = parseNotes(text)
   return notes ? { notes } : { chat: text.slice(0, MAX_ASK) }
 }

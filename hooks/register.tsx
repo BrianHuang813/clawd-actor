@@ -4,13 +4,20 @@ import type { EngineInterface as Engine, Register } from 'claude-code'
 import { bubble, clean, holdFrames, parseClawd, persona, HELP } from './chat'
 import { langOf, say, type Lang } from './say'
 import { cheer, earned, onTurn, readGot, readStats, shelf, type Stats } from './badges'
-import { addLines, candidates, dayKey, dueReminders, hhmm, items, listAll, markNotes, minuteOf, pickPrompt, readPicks, resolveAt, splitNotebook, summary, sweep, takeOn, tick as tickItem, INBOX, NOTES, NOTES_FILE, PICK_SYSTEM, REMINDERS, TODO, TODO_FILE, readConfig, type Candidate, type NoteAsk } from './notes'
+import { addLines, candidates, dayKey, dueReminders, hhmm, items, listAll, markNotes, minuteOf, parseNotes, pickPrompt, readPicks, resolveAt, splitNotebook, summary, sweep, takeOn, tick as tickItem, INBOX, NOTES, NOTES_FILE, PICK_SYSTEM, REMINDERS, TODO, TODO_FILE, readConfig, type Candidate, type NoteAsk } from './notes'
 import { ACT_FRAMES, FRAME_MS, frameGrid, frameRows, H, hold, rewardScene, SIXSEVEN_FRAMES, type Mode, type Shown } from './scenes'
 import { gridToSvg } from './svg'
+import { MARGIN_COL, PAPER, pageOf, paper, toBase64, type Line } from './book'
 
 const MAX_STAGE = 60 // widest the wander roams, however wide the terminal
 const frame = atom({ plugin: 'clawd-actor', key: 'frame' } as const, 0)
 // The turn's show, kept in $.state too: a hot reload (/reload-plugins) loses module variables, not state
+// Bumped on every notebook write: the /clawd book pane reads it, so it redraws
+const bookRev = atom({ plugin: 'clawd-actor', key: 'book' } as const, 0)
+const BOOK = 'clawd-book'
+const PENCIL = '#5a5752'
+const RED_PENCIL = '#b0413e'
+const FADED = '#9a968e' // a ticked line, rubbed out
 const show = atom({ plugin: 'clawd-actor', key: 'show' } as const, { isTurnRunning: false, turnBase: 0, seed: -1, played: 0 })
 
 // The spinner's word, read while it draws. State cannot be written during a render,
@@ -123,7 +130,10 @@ const edit = ($: Engine, file: NoteFile, change: (md: string) => string | undefi
     const path = await notesPath($, file)
     const md = await readFile($, path)
     const next = change(md)
-    if (next !== undefined && next !== md) await $.fs.write(path, next)
+    if (next !== undefined && next !== md) {
+      await $.fs.write(path, next)
+      await update($, bookRev, n => n + 1)
+    }
     return next ?? md
   })
   notebook = run.catch(() => undefined)
@@ -414,6 +424,7 @@ export const register: Register = (on, options) => {
     const action = 'action' in ask ? ask.action : ''
     tally($, s => ({ ...s, hellos: s.hellos + 1, pets: s.pets + (action === 'pet' ? 1 : 0), feeds: s.feeds + (action === 'feed' ? 1 : 0) }))
     if ('help' in ask) await react($, 'wave', HELP)
+    else if ('book' in ask) await $.ui.open({ id: BOOK, title: "Clawd's notebook" })
     else if ('badges' in ask) $.clock.after(1, () => showBadges($))
     else if ('action' in ask) await react($, ask.action, undefined, ask.action === 'sixseven' ? SIXSEVEN_FRAMES : undefined) // 67 runs through all its gears
     else if ('notes' in ask) $.clock.after(1, () => keepNotes($, ask.notes)) // on a timer: the prompt never waits on the file
@@ -514,6 +525,62 @@ export const register: Register = (on, options) => {
           </Box>
         )}
         {below}
+      </Box>
+    )
+  })
+
+  // /clawd book: today's page on ruled paper; a press ticks an item, the field below adds a line
+  on('ui.render', { component: 'Pane', requestId: BOOK }, async ($, e) => {
+    const rev = await read($, bookRev) // first: the pane redraws on every notebook write
+    const ui = $.ui.resolve(e)
+    const { Box, Text, Button, Input } = ui
+    const day = dayKey(new Date(await $.clock.now()))
+    let page: Line[]
+    try {
+      page = pageOf(await edit($, TODO_FILE), await edit($, NOTES_FILE), day)
+    } catch (err) {
+      return <Text>{say('en').noNotebook(err instanceof Error ? err.message : String(err))}</Text>
+    }
+    const press = (line: Extract<Line, { kind: 'item' }>) =>
+      line.section === TODO
+        ? keepNotes($, { kind: 'done', n: line.n + 1 }) // the bubble, the dance and the badge count, as /clawd done
+        : edit($, TODO_FILE, md => tickItem(md, day, REMINDERS, line.n)).catch(() => undefined)
+    const bg = `#${PAPER.toString(16)}`
+    const words = (line: Line) => {
+      if (line.kind !== 'item' || line.isDone) {
+        const isDone = line.kind === 'item'
+        return (
+          <Text wrap="truncate" backgroundColor={bg} color={line.kind === 'date' ? RED_PENCIL : isDone ? FADED : PENCIL} bold={line.kind === 'date' || line.kind === 'head'} underline={line.kind === 'head'} strikethrough={isDone}>
+            {line.kind === 'date' ? `# ${line.text}` : isDone ? `☑ ${line.text}` : line.text}
+          </Text>
+        )
+      }
+      return (
+        <Button key={`${line.section}-${line.n}`} plain onPress={() => void press(line)}>
+          <Text wrap="truncate" backgroundColor={bg} color={PENCIL}>{`☐ ${line.text}`}</Text>
+        </Button>
+      )
+    }
+    // a new key each write empties the field after a line goes in
+    const add = (
+      <Input key={`book-add-${rev}`} label="+ " placeholder="a todo for today, or note / remind / done ..." submitLabel="add" onSubmit={value => {
+        const text = clean(value)
+        if (text) void keepNotes($, parseNotes(text) ?? { kind: 'plan', items: [text] })
+      }} />
+    )
+    if (!('Raster' in ui)) return <Box flexDirection="column">{page.map(words)}{add}</Box> // no Raster off the terminal
+    const { Raster } = ui
+    const columns = Math.max(24, e.props.bodyColumns)
+    const rows = page.length * 2 + 1
+    return (
+      <Box flexDirection="column">
+        <Box position="relative" width={columns} height={rows}>
+          <Raster key="paper" columns={columns} rows={rows} cells={toBase64(paper(columns, rows))} />
+          {page.map((line, i) => (
+            <Box position="absolute" top={i * 2} left={MARGIN_COL + 2} width={columns - MARGIN_COL - 3}>{words(line)}</Box>
+          ))}
+        </Box>
+        {add}
       </Box>
     )
   })
