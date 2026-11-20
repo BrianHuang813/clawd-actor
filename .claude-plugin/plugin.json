@@ -44,6 +44,13 @@
       "required": false,
       "options": ["en", "zh"],
       "default": "en"
+    },
+    "animate": {
+      "type": "boolean",
+      "title": "Clawd acts out each turn",
+      "description": "Off: Clawd stays out of the way while Claude works, leaving the rows to the chat. /clawd and reminders still show.",
+      "required": false,
+      "default": true
     }
   }
 }

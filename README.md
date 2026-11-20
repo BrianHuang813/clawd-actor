@@ -149,6 +149,7 @@ remember earlier messages.
 | `remindAhead` | 5 | minutes a reminder is called out ahead; 0 only when due |
 | `nudgeMinutes` | 30 | least minutes between "next up" bubbles at a turn's start; 0 off |
 | `bookLanguage` | en | the words around `/clawd book`: `en` or `zh`; your own lines stay as written |
+| `animate` | on | Clawd acts out each turn; off leaves those rows to the chat on a short screen (`/clawd` and reminders still show) |
 
 Notes go to `~/.claude/clawd-notes.md`, todos and reminders to `~/.claude/clawd-todo.md`: plain
 markdown files you can edit, or ask Claude to plan your day from. A notebook from before 0.9, with

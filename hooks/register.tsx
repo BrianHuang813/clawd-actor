@@ -493,7 +493,8 @@ export const register: Register = (on, options) => {
     // command's busy blink (a /reload-plugins, a plugin hot-reload's repaint) turns it on with no
     // turn started, and the band would flash Clawd for the one frame before the command ends.
     // isTurnRunning follows the turn; a /clawd reaction plays past both.
-    if (e.props.hasSurvey || ((!e.props.isWorking || !isTurnRunning) && !reaction) || e.props.maxRows < H) return next(e)
+    // animate off: a turn leaves the rows to the chat, only a /clawd reaction (or a reminder) takes them
+    if (e.props.hasSurvey || ((!e.props.isWorking || !isTurnRunning || !config.animate) && !reaction) || e.props.maxRows < H) return next(e)
 
     const width = Math.min(e.props.bodyColumns, MAX_STAGE)
     // the bubble needs its two border rows besides the text: left out when the band has no room for one line

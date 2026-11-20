@@ -180,9 +180,11 @@ test('sweep drops only what is finished, in the inbox and before the cutoff, and
 })
 
 test('settings take whole numbers in range, else their defaults', () => {
-  expect(readConfig()).toEqual({ keepDays: 30, cleanHint: 20, remindAhead: 5, nudgeMinutes: 30, bookLanguage: 'en' })
-  expect(readConfig({ keepDays: 7, cleanHint: 0, remindAhead: 10, nudgeMinutes: 0 })).toEqual({ keepDays: 7, cleanHint: 0, remindAhead: 10, nudgeMinutes: 0, bookLanguage: 'en' })
+  expect(readConfig()).toEqual({ keepDays: 30, cleanHint: 20, remindAhead: 5, nudgeMinutes: 30, bookLanguage: 'en', animate: true })
+  expect(readConfig({ keepDays: 7, cleanHint: 0, remindAhead: 10, nudgeMinutes: 0 })).toEqual({ keepDays: 7, cleanHint: 0, remindAhead: 10, nudgeMinutes: 0, bookLanguage: 'en', animate: true })
   expect(readConfig({ keepDays: 0, remindAhead: -1, nudgeMinutes: 2.5, cleanHint: 'x', bookLanguage: 'fr' })).toEqual(readConfig())
   expect(readConfig({ bookLanguage: 'zh' }).bookLanguage).toBe('zh')
+  expect(readConfig({ animate: false }).animate).toBe(false)
+  expect(readConfig({ animate: 'false' }).animate).toBe(false)
   expect(dueReminders(addLines('', DAY, REMINDERS, ['- [ ] 14:00 standup']), DAY, 13 * 60 + 50, 10)[0]?.isNow).toBe(false)
 })
