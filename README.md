@@ -129,7 +129,7 @@ remember earlier messages.
 | `/clawd list todo` | every open todo, from any day, newest first |
 | `/clawd clean` | clears finished lines older than 30 days (a setting): ticked todos and reminders, notes taken on |
 | `/clawd remind 14:00 standup` | a reminder for later today (also `30m`, `1h30m`, `14：00`, `30分`) |
-| `/clawd book` | today's page in a pane, on ruled paper in the terminal: press `☐` to tick a line, type in the field to add a todo (or `note …`, `remind …`) |
+| `/clawd book` | the notebook in a pane, on ruled paper in the terminal: Todo, Notes and Plan, each folded open or shut from its heading; press `☐` to tick a line (again to take it back), `→` to take a waiting todo on today, and type in the field to add a todo (or `note …`, `remind 15:00 …`, `done 2`) |
 
 - **Reminders:** Clawd honks five minutes ahead (a setting) and again when it is due, with a toast. They only
   work while Claude Code is open: they keep you on time while you code, they are not a calendar.

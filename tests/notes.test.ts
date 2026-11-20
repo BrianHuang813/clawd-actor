@@ -1,6 +1,6 @@
 import { test, expect } from 'claude-code/testing'
 import { langOf } from '../hooks/say'
-import { addLines, candidates, listAll, markNotes, readConfig, splitNotebook, sweep, dueReminders, items, noteLines, parseNotes, readPicks, resolveAt, summary, takeOn, tick, INBOX, NOTES, REMINDERS, TODO } from '../hooks/notes'
+import { addLines, candidates, listAll, markNotes, readConfig, splitNotebook, sweep, dueReminders, items, noteLines, parseNotes, readPicks, resolveAt, summary, takeOn, tick, untick, INBOX, NOTES, REMINDERS, TODO } from '../hooks/notes'
 
 const DAY = '2026-11-14'
 const at = (h: number, m: number) => new Date(2026, 10, 14, h, m)
@@ -79,6 +79,8 @@ test('tick checks off the n-th item of the section only', () => {
   expect(items(done, DAY, REMINDERS)[0].isDone).toBe(false)
   expect(tick(md, DAY, TODO, 5)).toBeUndefined()
   expect(tick(md, '2026-01-01', TODO, 0)).toBeUndefined()
+  expect(untick(done, DAY, TODO, 1)).toBe(md) // a slip of the finger, taken back
+  expect(untick(md, DAY, TODO, 5)).toBeUndefined()
 })
 
 test('reminders are called out 5 minutes ahead, then when due, until ticked', () => {

@@ -261,24 +261,38 @@ test('the settings change how long clean keeps, and turn the hint and the nudge 
 
 const PANE = { title: "Clawd's notebook", isFocused: true, bodyColumns: 40, placement: 'dock', scroll: { offset: 0, bodyRows: 30 }, view: {} } as any
 
-test('/clawd book draws today on ruled paper; a press ticks a todo, the field adds one', async ($, on) => {
-  const files = { [PATH]: '# 2026-11-14\n\n## Todo\n- [ ] ship it\n', [NOTES]: '# 2026-11-14\n\n## Notes\n- 09:00 問 PM 欄位\n' }
-  const opened: string[] = []
-  on('ui.open', ($: any, e: any) => (opened.push(e.id), { value: { isPlaced: true } }))
+test('/clawd book draws today on ruled paper; a press ticks a todo and takes it back, the field adds one', async ($, on) => {
+  const files = {
+    [PATH]: '# Inbox\n\n## Todo\n- [ ] read the RFC\n\n# 2026-11-14\n\n## Todo\n- [ ] ship it\n',
+    [NOTES]: '# 2026-11-14\n\n## Notes\n- 09:00 問 PM 欄位\n',
+  }
+  const opened: any[] = []
+  on('ui.open', ($: any, e: any) => (opened.push(e), { value: { isPlaced: true } }))
   const { clock } = await start($, on, files)
   await clawd($, clock, 'book')
-  expect(opened).toEqual(['clawd-book'])
+  expect(opened[0]).toMatchObject({ id: 'clawd-book', focus: true }) // as big as the surface spares
 
   const pane = await $.ui.mount({ plugin: 'clawd-actor', surface: 'terminal', component: 'Pane', requestId: 'clawd-book', props: PANE } as any)
   expect((await pane.find({ type: 'Raster' })) !== undefined).toBe(true)
   expect(await shown(pane)).toContain('09:00 問 PM 欄位')
+  expect(await shown(pane)).toContain('remind 15:00') // how to type a note, a reminder, a done
 
   await pane.press({ key: 'Todo-0' })
   await clock.advance(10)
   expect(files[PATH]).toContain('- [x] ship it')
   expect((await pane.find({ type: 'Text', text: /ship it/ }))?.props.strikethrough).toBe(true)
+  await pane.press({ key: 'Todo-0' }) // pressed by mistake: taken back
+  expect(files[PATH]).toContain('- [ ] ship it')
 
-  await pane.input({ key: 'book-add-1', text: 'write the README' })
+  await pane.press({ key: 'plan-Inbox-read the RFC' }) // a waiting todo, taken on today
+  expect(files[PATH]).toContain('## Todo\n- [ ] ship it\n- [ ] read the RFC')
+
+  await pane.press({ key: 'fold-note' })
+  expect(await shown(pane)).not.toContain('09:00 問 PM 欄位')
+  await pane.press({ key: 'fold-note' })
+  expect(await shown(pane)).toContain('09:00 問 PM 欄位')
+
+  await pane.input({ key: 'book-add-3', text: 'write the README' })
   await clock.advance(10)
   expect(files[PATH]).toContain('- [ ] write the README')
   await pane.unmount()

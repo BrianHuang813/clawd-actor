@@ -5,8 +5,11 @@ export type Show = { isTurnRunning: boolean; turnBase: number; seed: number; pla
 /** Bumped on every write to a notebook file, so the /clawd book pane redraws. */
 export type Book = number
 
+/** The parts of the /clawd book page folded shut. */
+export type BookFold = ('todo' | 'note' | 'plan')[]
+
 declare module 'claude-code' {
   interface PluginState {
-    'clawd-actor': { frame: Frame; show: Show; book: Book }
+    'clawd-actor': { frame: Frame; show: Show; book: Book; bookFold: BookFold }
   }
 }

@@ -175,14 +175,21 @@ export const noteLines = (md: string, day: string): string[] => {
 }
 
 /** The file with the `n`-th (0-based) checklist item of `section` of `day` ticked, `note` after it; undefined when there is none. */
-export const tick = (md: string, day: string, section: string, n: number, note = ''): string | undefined => {
+export const tick = (md: string, day: string, section: string, n: number, note = ''): string | undefined =>
+  setItem(md, day, section, n, l => l.replace(/- \[ \]/, '- [x]') + note)
+
+/** The file with the `n`-th (0-based) checklist item of `section` of `day` open again; undefined when there is none. */
+export const untick = (md: string, day: string, section: string, n: number): string | undefined =>
+  setItem(md, day, section, n, l => l.replace(/- \[[xX]\]/, '- [ ]'))
+
+const setItem = (md: string, day: string, section: string, n: number, change: (line: string) => string) => {
   const lines = split(md)
   const at = locate(lines, day, section)
   if (at.head < 0) return undefined
   let seen = -1
   const i = scan(lines, at.head + 1, at.end, l => ITEM.test(l) && ++seen === n)
   if (i === at.end) return undefined
-  return join(lines.map((l, k) => (k === i ? l.replace(/- \[ \]/, '- [x]') + note : l)))
+  return join(lines.map((l, k) => (k === i ? change(l) : l)))
 }
 
 export type Due = { n: number; at: number; text: string; isNow: boolean }
