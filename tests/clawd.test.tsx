@@ -114,3 +114,18 @@ test('a band mounted before turn.start animates once the turn starts', { timeout
   }
   expect(frames.size).toBeGreaterThan(1) // the frame's writes keep redelivering the band all turn
 })
+
+test('with animate off a turn leaves the band to what is beneath', { options: { animate: false } }, async ($, on) => {
+  mock.clock(on)
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('command.register', ($, e) => ({ value: { command: e.name } }))
+  on('turn.start', () => ({ turnId: 't1' }))
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>below</Text>
+  })
+  await $.session.start({ cwd: '/tmp', surface: 'terminal' } as any)
+  await $.turn.start({ text: 'hi', turnId: 't1' } as any)
+  const ui = await $.ui.mount({ plugin: 'clawd-actor', surface: 'terminal', component: 'AbovePrompt', props: BAND })
+  expect(await shown(ui)).toBe('below')
+})

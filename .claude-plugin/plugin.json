@@ -1,6 +1,6 @@
 {
   "name": "clawd-actor",
-  "version": "0.9.2",
+  "version": "0.10.0",
   "description": "While Claude works, Clawd acts out the spinner's -ing word above the prompt, and the tool that is running; it also keeps your notes, todos and reminders, and hands out badges",
   "author": { "name": "Brian Huang" },
   "homepage": "https://github.com/BrianHuang813/clawd-actor",
@@ -36,6 +36,21 @@
       "description": "At a turn's start Clawd shows the next open todo at most this often. 0 turns it off.",
       "required": false,
       "default": 30
+    },
+    "bookLanguage": {
+      "type": "string",
+      "title": "Language of /clawd book",
+      "description": "The words around the notebook pane: en (English) or zh (中文). Your own lines stay as you wrote them.",
+      "required": false,
+      "options": ["en", "zh"],
+      "default": "en"
+    },
+    "animate": {
+      "type": "boolean",
+      "title": "Clawd acts out each turn",
+      "description": "Off: Clawd stays out of the way while Claude works, leaving the rows to the chat. /clawd and reminders still show.",
+      "required": false,
+      "default": true
     }
   }
 }

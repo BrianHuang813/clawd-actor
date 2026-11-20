@@ -90,7 +90,9 @@ the engine busy and starts moving once a turn starts, even on a band drawn just 
 plays its reactions between turns and shows Haiku's answer (or a fallback) in a bubble that fits
 any script (combining marks included), that `/clawd shift` calls 閃身步 a character at a time
 before the dash and leaves afterimages that fade, wherever the frame counter stands, that only the latest `/clawd` gets its answer shown, that
-the mods beneath get the rows Clawd leaves them, that the update notice shows only when `main` carries a newer version, and that the
+the mods beneath get the rows Clawd leaves them, that `/clawd book` draws the day on ruled paper filling the pane, ticks and unticks a
+line, folds a part and adds what is typed, that the `animate` setting off keeps Clawd out of turns,
+that the update notice shows only when `main` carries a newer version, and that the
 first session after an update says what is new, once.
 
 Block characters and symbols are drawn one cell wide; a terminal font that draws some of them
@@ -107,6 +109,8 @@ node tools/chat-frames.ts > chat.json   # a mid-turn /clawd chat, with hooks/cha
 python tools/render.py chat.json assets/chat.gif
 node tools/notebook-frames.ts > notebook.json   # the notebook and a badge, with hooks/say.ts's lines
 python tools/render.py notebook.json assets/notebook.gif
+node tools/book-frames.ts > book.json           # /clawd book's pane, with hooks/book.ts's paper and page
+python tools/render.py book.json assets/book.gif
 ```
 
 `tools/render.py` uses DejaVu Sans Mono (and Droid Sans Fallback for 閃身步) and draws block

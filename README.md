@@ -7,10 +7,10 @@ hands out badges.
 
 ![Clawd as a detective in a fedora, magnifying glass in hand, pondering under a thought bubble; calling out 閃身步 and flash-stepping across the stage and back; and as a homemaker in a curly perm and apron, cooking at a pot that stays put](assets/demo.gif)
 
-> **New in 0.9:** [the notebook](#the-notebook) keeps notes and todos in two files,
-> `/clawd plan` picks from notes of any day too, `/clawd list note` and `list todo` show every
-> open one, `/clawd clean` clears what is old and finished, and a few settings in `/config`.
-> Ten badges still need a costume: [draw one and send it in](CONTRIBUTING.md#dress-clawd-for-a-badge).
+> **New in 0.10:** [`/clawd book`](#the-notebook) opens today's page on ruled paper in a pane:
+> tick, fold and type your todos and notes there. A short screen? Turn the `animate` setting off and
+> Clawd sits out the turns. Ten badges still need a costume:
+> [draw one and send it in](CONTRIBUTING.md#dress-clawd-for-a-badge).
 
 - [Install](#install)
 - [The show](#the-show)
@@ -47,6 +47,8 @@ there). `claude -p` and cloud sessions draw no mod interface, so Clawd does not 
   and works. Little Clawds in blue, yellow, green and pink tag along, dance backup or hatch from
   an egg.
 - **Leaves when the turn ends** and draws nothing while idle, unless you call it out with `/clawd`.
+- **Sits out the turns** if you turn `animate` off in `/config`, for a screen with few rows to
+  spare; `/clawd` and reminders still bring it out.
 
 <details>
 <summary>All 33 scenes and the words that pick them</summary>
@@ -129,6 +131,9 @@ remember earlier messages.
 | `/clawd list todo` | every open todo, from any day, newest first |
 | `/clawd clean` | clears finished lines older than 30 days (a setting): ticked todos and reminders, notes taken on |
 | `/clawd remind 14:00 standup` | a reminder for later today (also `30m`, `1h30m`, `14：00`, `30分`) |
+| `/clawd book` | the notebook in a pane, on ruled paper in the terminal: Todo, Notes and Plan, each folded open or shut from its heading; press `☐` to tick a line (again to take it back), `→` to take a waiting todo on today, and type in the field to add a todo (or `note …`, `remind 15:00 …`, `done 2`) |
+
+![/clawd book: today's page on cream ruled paper with a red margin; a todo is ticked and struck through, a waiting todo from yesterday is taken on today, a note is typed into the field below, and Plan is folded shut](assets/book.gif)
 
 - **Reminders:** Clawd honks five minutes ahead (a setting) and again when it is due, with a toast. They only
   work while Claude Code is open: they keep you on time while you code, they are not a calendar.
@@ -147,6 +152,8 @@ remember earlier messages.
 | `cleanHint` | 20 | old finished lines before `/clawd list` mentions cleaning; 0 never |
 | `remindAhead` | 5 | minutes a reminder is called out ahead; 0 only when due |
 | `nudgeMinutes` | 30 | least minutes between "next up" bubbles at a turn's start; 0 off |
+| `bookLanguage` | en | the words around `/clawd book`: `en` or `zh`; your own lines stay as written |
+| `animate` | on | Clawd acts out each turn; off leaves those rows to the chat on a short screen (`/clawd` and reminders still show) |
 
 Notes go to `~/.claude/clawd-notes.md`, todos and reminders to `~/.claude/clawd-todo.md`: plain
 markdown files you can edit, or ask Claude to plan your day from. A notebook from before 0.9, with

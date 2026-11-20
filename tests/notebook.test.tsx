@@ -1,3 +1,5 @@
+import { cells } from '../hooks/chat'
+import { say } from '../hooks/say'
 import { test, expect, mock } from 'claude-code/testing'
 
 const BAND = { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 60 } as any
@@ -257,4 +259,61 @@ test('the settings change how long clean keeps, and turn the hint and the nudge 
   expect(await shown(ui)).not.toContain('/clawd clean')
   await clawd($, clock, 'clean')
   expect(files[PATH]).toBe('# 2026-11-12\n\n## Todo\n- [x] recent\n\n# 2026-11-14\n\n## Todo\n- [ ] b\n')
+})
+
+const PANE = { title: "Clawd's notebook", isFocused: true, bodyColumns: 40, placement: 'dock', scroll: { offset: 0, bodyRows: 30 }, view: {} } as any
+
+test('/clawd book draws today on ruled paper; a press ticks a todo and takes it back, the field adds one', async ($, on) => {
+  const files = {
+    [PATH]: '# Inbox\n\n## Todo\n- [ ] read the RFC\n\n# 2026-11-14\n\n## Todo\n- [ ] ship it\n',
+    [NOTES]: '# 2026-11-14\n\n## Notes\n- 09:00 問 PM 欄位\n',
+  }
+  const opened: any[] = []
+  on('ui.open', ($: any, e: any) => (opened.push(e), { value: { isPlaced: true } }))
+  const { clock } = await start($, on, files)
+  await clawd($, clock, 'book')
+  expect(opened[0]).toMatchObject({ id: 'clawd-book', focus: true }) // as big as the surface spares
+
+  const pane = await $.ui.mount({ plugin: 'clawd-actor', surface: 'terminal', component: 'Pane', requestId: 'clawd-book', props: PANE } as any)
+  const raster = await pane.find({ type: 'Raster' })
+  // the paper takes the pane's 30 rows but the hint's and the field's
+  expect(raster?.props.rows).toBe(30 - Math.ceil(cells(say('en').bookHint) / 40) - 1)
+  expect(await shown(pane)).toContain('09:00 問 PM 欄位')
+  expect(await shown(pane)).toContain('Enter adds a todo') // English by default, Chinese notes or not // how to type a note, a reminder, a done
+
+  await pane.press({ key: 'Todo-0' })
+  await clock.advance(10)
+  expect(files[PATH]).toContain('- [x] ship it')
+  expect((await pane.find({ type: 'Text', text: /ship it/ }))?.props.strikethrough).toBe(true)
+  await pane.press({ key: 'Todo-0' }) // pressed by mistake: taken back
+  expect(files[PATH]).toContain('- [ ] ship it')
+
+  await pane.press({ key: 'plan-Inbox-read the RFC' }) // a waiting todo, taken on today
+  expect(files[PATH]).toContain('## Todo\n- [ ] ship it\n- [ ] read the RFC')
+
+  await pane.press({ key: 'fold-note' })
+  expect(await shown(pane)).not.toContain('09:00 問 PM 欄位')
+  await pane.press({ key: 'fold-note' })
+  expect(await shown(pane)).toContain('09:00 問 PM 欄位')
+
+  await pane.input({ key: 'book-add-3', text: 'write the README' })
+  await clock.advance(10)
+  expect(files[PATH]).toContain('- [ ] write the README')
+  await pane.unmount()
+})
+
+test('/clawd book speaks Chinese when bookLanguage is zh', { options: { bookLanguage: 'zh' } }, async ($, on) => {
+  await start($, on, {})
+  const pane = await $.ui.mount({ plugin: 'clawd-actor', surface: 'terminal', component: 'Pane', requestId: 'clawd-book', props: PANE } as any)
+  expect(await shown(pane)).toContain('Enter 加成今天的待辦')
+  await pane.unmount()
+})
+
+test('/clawd book draws a plain list where there is no Raster', async ($, on) => {
+  const files = { [PATH]: '# 2026-11-14\n\n## Todo\n- [ ] ship it\n' }
+  await start($, on, files)
+  const pane = await $.ui.mount({ plugin: 'clawd-actor', surface: 'desktop', component: 'Pane', requestId: 'clawd-book', props: PANE } as any)
+  expect(await pane.find({ type: 'Raster' })).toBeUndefined()
+  expect(await shown(pane)).toContain('☐ ship it')
+  await pane.unmount()
 })

@@ -175,14 +175,21 @@ export const noteLines = (md: string, day: string): string[] => {
 }
 
 /** The file with the `n`-th (0-based) checklist item of `section` of `day` ticked, `note` after it; undefined when there is none. */
-export const tick = (md: string, day: string, section: string, n: number, note = ''): string | undefined => {
+export const tick = (md: string, day: string, section: string, n: number, note = ''): string | undefined =>
+  setItem(md, day, section, n, l => l.replace(/- \[ \]/, '- [x]') + note)
+
+/** The file with the `n`-th (0-based) checklist item of `section` of `day` open again; undefined when there is none. */
+export const untick = (md: string, day: string, section: string, n: number): string | undefined =>
+  setItem(md, day, section, n, l => l.replace(/- \[[xX]\]/, '- [ ]'))
+
+const setItem = (md: string, day: string, section: string, n: number, change: (line: string) => string) => {
   const lines = split(md)
   const at = locate(lines, day, section)
   if (at.head < 0) return undefined
   let seen = -1
   const i = scan(lines, at.head + 1, at.end, l => ITEM.test(l) && ++seen === n)
   if (i === at.end) return undefined
-  return join(lines.map((l, k) => (k === i ? l.replace(/- \[ \]/, '- [x]') + note : l)))
+  return join(lines.map((l, k) => (k === i ? change(l) : l)))
 }
 
 export type Due = { n: number; at: number; text: string; isNow: boolean }
@@ -393,18 +400,20 @@ export const sweep = (md: string, cutoff: string): { md: string; count: number }
 }
 
 /** The settings: the person's own from plugin.json's userConfig, each a whole number of at least `min`, else its default. */
-export type Config = { keepDays: number; cleanHint: number; remindAhead: number; nudgeMinutes: number }
-const LIMITS: Record<keyof Config, [fallback: number, min: number]> = {
+export type Config = { keepDays: number; cleanHint: number; remindAhead: number; nudgeMinutes: number; bookLanguage: Lang; animate: boolean }
+const LIMITS: Record<Exclude<keyof Config, 'bookLanguage' | 'animate'>, [fallback: number, min: number]> = {
   keepDays: [KEEP_DAYS, 1],
   cleanHint: [CLEAN_HINT, 0], // 0: never mentioned
   remindAhead: [WARN_MIN, 0], // 0: called only when due
   nudgeMinutes: [30, 0], // 0: no "next up" bubbles
 }
 export const readConfig = (options: Readonly<Record<string, unknown>> = {}): Config => {
-  const pick = (k: keyof Config) => {
+  const pick = (k: keyof typeof LIMITS) => {
     const [fallback, min] = LIMITS[k]
     const n = Number(options[k])
     return Number.isInteger(n) && n >= min ? n : fallback
   }
-  return { keepDays: pick('keepDays'), cleanHint: pick('cleanHint'), remindAhead: pick('remindAhead'), nudgeMinutes: pick('nudgeMinutes') }
+  const bookLanguage: Lang = options.bookLanguage === 'zh' ? 'zh' : 'en' // English unless zh is chosen
+  const animate = options.animate !== false && options.animate !== 'false' // on unless turned off
+  return { keepDays: pick('keepDays'), cleanHint: pick('cleanHint'), remindAhead: pick('remindAhead'), nudgeMinutes: pick('nudgeMinutes'), bookLanguage, animate }
 }

@@ -6,6 +6,7 @@ import unicodedata
 from PIL import Image, ImageDraw, ImageFont
 
 FONT = ImageFont.truetype('/usr/share/fonts/dejavu/DejaVuSansMono.ttf', 18)
+BOLD = ImageFont.truetype('/usr/share/fonts/dejavu/DejaVuSansMono-Bold.ttf', 18)
 CJK = ImageFont.truetype('/usr/share/fonts/google-droid/DroidSansFallback.ttf', 18)  # 閃身步, two cells each
 FRAME_MS = 140
 PAD = 18
@@ -33,7 +34,8 @@ CW = round(FONT.getlength('M'))
 CH = ascent + descent  # block elements span ascent+descent, so rows touch
 TOP = max(len(f.get('bubble', [])) for f in data['frames'])  # rows for Clawd's speech bubble, if any frame has one
 STAGE = len(data['frames'][0]['rows'])
-ROWS = TOP + STAGE + 1 + 1 + 1 + 3  # bubble, stage, gap, spinner, gap, prompt box
+PANE = data.get('pane', False)  # a pane (tools/book-frames.ts): its rows are the whole picture
+ROWS = STAGE if PANE else TOP + STAGE + 1 + 1 + 1 + 3  # bubble, stage, gap, spinner, gap, prompt box
 W, H = PAD * 2 + CW * cols, PAD * 2 + CH * ROWS
 WHITE = COLORS['white']
 
@@ -56,7 +58,7 @@ def rgb(name):
     return COLORS[None]
 
 
-def cell(draw, col, row, ch, color, bg=None):
+def cell(draw, col, row, ch, color, bg=None, bold=False, strike=False):
     ch = SUBST.get(ch, ch)
     x, y = PAD + col * CW, PAD + row * CH
     if bg:
@@ -76,7 +78,9 @@ def cell(draw, col, row, ch, color, bg=None):
     if wide(ch):
         draw.text((x + CW, y + CH / 2), ch, font=CJK, fill=color, anchor='mm')
         return
-    draw.text((x, y), ch, font=FONT, fill=color, anchor='la')
+    draw.text((x, y), ch, font=BOLD if bold else FONT, fill=color, anchor='la')
+    if strike:
+        draw.line([x, y + CH / 2, x + CW, y + CH / 2], fill=color, width=1)
 
 
 def wide(ch):
@@ -88,7 +92,21 @@ def line(draw, col, row, text, color):
         cell(draw, col + i, row, ch, color)
 
 
+def pane(f):
+    im = Image.new('RGB', (W, H), BG)
+    d = ImageDraw.Draw(im)
+    for r, runs in enumerate(f['rows']):
+        c = 0
+        for run in runs:
+            for ch in run['text']:
+                cell(d, c, r, ch, rgb(run.get('color')), rgb(run['bg']) if run.get('bg') else None, run.get('bold'), run.get('strike'))
+                c += 1
+    return im
+
+
 def frame(i, f):
+    if PANE:
+        return pane(f)
     im = Image.new('RGB', (W, H), BG)
     d = ImageDraw.Draw(im)
     said = f.get('bubble', [])
