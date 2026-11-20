@@ -1,3 +1,5 @@
+import { cells } from '../hooks/chat'
+import { say } from '../hooks/say'
 import { test, expect, mock } from 'claude-code/testing'
 
 const BAND = { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 60 } as any
@@ -273,9 +275,11 @@ test('/clawd book draws today on ruled paper; a press ticks a todo and takes it 
   expect(opened[0]).toMatchObject({ id: 'clawd-book', focus: true }) // as big as the surface spares
 
   const pane = await $.ui.mount({ plugin: 'clawd-actor', surface: 'terminal', component: 'Pane', requestId: 'clawd-book', props: PANE } as any)
-  expect((await pane.find({ type: 'Raster' })) !== undefined).toBe(true)
+  const raster = await pane.find({ type: 'Raster' })
+  // the paper takes the pane's 30 rows but the hint's and the field's
+  expect(raster?.props.rows).toBe(30 - Math.ceil(cells(say('en').bookHint) / 40) - 1)
   expect(await shown(pane)).toContain('09:00 問 PM 欄位')
-  expect(await shown(pane)).toContain('remind 15:00') // how to type a note, a reminder, a done
+  expect(await shown(pane)).toContain('Enter adds a todo') // English by default, Chinese notes or not // how to type a note, a reminder, a done
 
   await pane.press({ key: 'Todo-0' })
   await clock.advance(10)
@@ -295,6 +299,13 @@ test('/clawd book draws today on ruled paper; a press ticks a todo and takes it 
   await pane.input({ key: 'book-add-3', text: 'write the README' })
   await clock.advance(10)
   expect(files[PATH]).toContain('- [ ] write the README')
+  await pane.unmount()
+})
+
+test('/clawd book speaks Chinese when bookLanguage is zh', { options: { bookLanguage: 'zh' } }, async ($, on) => {
+  await start($, on, {})
+  const pane = await $.ui.mount({ plugin: 'clawd-actor', surface: 'terminal', component: 'Pane', requestId: 'clawd-book', props: PANE } as any)
+  expect(await shown(pane)).toContain('Enter 加成今天的待辦')
   await pane.unmount()
 })
 

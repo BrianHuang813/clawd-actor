@@ -148,6 +148,7 @@ remember earlier messages.
 | `cleanHint` | 20 | old finished lines before `/clawd list` mentions cleaning; 0 never |
 | `remindAhead` | 5 | minutes a reminder is called out ahead; 0 only when due |
 | `nudgeMinutes` | 30 | least minutes between "next up" bubbles at a turn's start; 0 off |
+| `bookLanguage` | en | the words around `/clawd book`: `en` or `zh`; your own lines stay as written |
 
 Notes go to `~/.claude/clawd-notes.md`, todos and reminders to `~/.claude/clawd-todo.md`: plain
 markdown files you can edit, or ask Claude to plan your day from. A notebook from before 0.9, with

@@ -36,6 +36,14 @@
       "description": "At a turn's start Clawd shows the next open todo at most this often. 0 turns it off.",
       "required": false,
       "default": 30
+    },
+    "bookLanguage": {
+      "type": "string",
+      "title": "Language of /clawd book",
+      "description": "The words around the notebook pane: en (English) or zh (中文). Your own lines stay as you wrote them.",
+      "required": false,
+      "options": ["en", "zh"],
+      "default": "en"
     }
   }
 }

@@ -400,18 +400,19 @@ export const sweep = (md: string, cutoff: string): { md: string; count: number }
 }
 
 /** The settings: the person's own from plugin.json's userConfig, each a whole number of at least `min`, else its default. */
-export type Config = { keepDays: number; cleanHint: number; remindAhead: number; nudgeMinutes: number }
-const LIMITS: Record<keyof Config, [fallback: number, min: number]> = {
+export type Config = { keepDays: number; cleanHint: number; remindAhead: number; nudgeMinutes: number; bookLanguage: Lang }
+const LIMITS: Record<Exclude<keyof Config, 'bookLanguage'>, [fallback: number, min: number]> = {
   keepDays: [KEEP_DAYS, 1],
   cleanHint: [CLEAN_HINT, 0], // 0: never mentioned
   remindAhead: [WARN_MIN, 0], // 0: called only when due
   nudgeMinutes: [30, 0], // 0: no "next up" bubbles
 }
 export const readConfig = (options: Readonly<Record<string, unknown>> = {}): Config => {
-  const pick = (k: keyof Config) => {
+  const pick = (k: keyof typeof LIMITS) => {
     const [fallback, min] = LIMITS[k]
     const n = Number(options[k])
     return Number.isInteger(n) && n >= min ? n : fallback
   }
-  return { keepDays: pick('keepDays'), cleanHint: pick('cleanHint'), remindAhead: pick('remindAhead'), nudgeMinutes: pick('nudgeMinutes') }
+  const bookLanguage: Lang = options.bookLanguage === 'zh' ? 'zh' : 'en' // English unless zh is chosen
+  return { keepDays: pick('keepDays'), cleanHint: pick('cleanHint'), remindAhead: pick('remindAhead'), nudgeMinutes: pick('nudgeMinutes'), bookLanguage }
 }

@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register } from 'claude-code'
 
-import { bubble, clean, holdFrames, parseClawd, persona, HELP } from './chat'
+import { bubble, cells, clean, holdFrames, parseClawd, persona, HELP } from './chat'
 import { langOf, say, type Lang } from './say'
 import { cheer, earned, onTurn, readGot, readStats, shelf, type Stats } from './badges'
 import { addLines, candidates, dayKey, dueReminders, hhmm, items, listAll, markNotes, minuteOf, parseNotes, pickPrompt, readPicks, resolveAt, splitNotebook, summary, sweep, takeOn, tick as tickItem, untick, INBOX, NOTES, NOTES_FILE, PICK_SYSTEM, REMINDERS, TODO, TODO_FILE, readConfig, type Candidate, type NoteAsk } from './notes'
@@ -540,11 +540,9 @@ export const register: Register = (on, options) => {
     const { Box, Text, Button, Input } = ui
     const day = dayKey(new Date(await $.clock.now()))
     let page: Line[]
-    let s = say('en')
+    const s = say(config.bookLanguage) // the bookLanguage setting, not the notebook's: English unless zh is chosen
     try {
-      const [todoMd, notesMd] = [await edit($, TODO_FILE), await edit($, NOTES_FILE)]
-      page = pageOf(todoMd, notesMd, day, folded)
-      s = say(langOf(todoMd + notesMd))
+      page = pageOf(await edit($, TODO_FILE), await edit($, NOTES_FILE), day, folded)
     } catch (err) {
       return <Text>{s.noNotebook(err instanceof Error ? err.message : String(err))}</Text>
     }
@@ -579,7 +577,7 @@ export const register: Register = (on, options) => {
     // a new key each write empties the field after a line goes in
     const add = (
       <Box flexDirection="column">
-        <Text dimColor>{s.bookHint}</Text>
+        <Text dimColor wrap="wrap">{s.bookHint}</Text>
         <Input key={`book-add-${rev}`} label="+ " placeholder={s.bookPlaceholder} submitLabel="add" autoFocus onSubmit={value => {
           const text = clean(value)
           if (text) void keepNotes($, parseNotes(text) ?? { kind: 'plan', items: [text] })
@@ -589,7 +587,9 @@ export const register: Register = (on, options) => {
     if (!('Raster' in ui)) return <Box flexDirection="column">{page.map(words)}{add}</Box> // no Raster off the terminal
     const { Raster } = ui
     const columns = Math.max(24, e.props.bodyColumns)
-    const rows = page.length * 2 + 1
+    // the paper fills the pane, the hint and the field below it; a longer page scrolls
+    const below = Math.ceil(cells(s.bookHint) / columns) + 1
+    const rows = Math.max(page.length * 2 + 1, e.props.scroll.bodyRows - below)
     return (
       <Box flexDirection="column">
         <Box position="relative" width={columns} height={rows}>
