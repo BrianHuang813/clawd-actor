@@ -133,7 +133,7 @@ remember earlier messages.
 | `/clawd remind 14:00 standup` | a reminder for later today (also `30m`, `1h30m`, `14：00`, `30分`) |
 | `/clawd book` | the notebook in a pane, on ruled paper in the terminal: Todo, Notes and Plan, each folded open or shut from its heading; press `☐` to tick a line (again to take it back), `→` to take a waiting todo on today, and type in the field to add a todo (or `note …`, `remind 15:00 …`, `done 2`) |
 
-![/clawd book: today's page on cream ruled paper with a red margin; a todo is ticked and struck through, a waiting todo from yesterday is taken on today, a note is typed into the field below, and Plan is folded shut](assets/book.gif)
+![The whole terminal: Claude fixes a flaky test while Clawd cooks above the prompt; /clawd book docks today's page on cream ruled paper on the right, where a todo is ticked and struck through, a waiting todo from yesterday is taken on today, a note is typed into the field below, and Plan is folded shut](assets/book.gif)
 
 - **Reminders:** Clawd honks five minutes ahead (a setting) and again when it is due, with a toast. They only
   work while Claude Code is open: they keep you on time while you code, they are not a calendar.

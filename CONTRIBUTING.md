@@ -109,7 +109,7 @@ node tools/chat-frames.ts > chat.json   # a mid-turn /clawd chat, with hooks/cha
 python tools/render.py chat.json assets/chat.gif
 node tools/notebook-frames.ts > notebook.json   # the notebook and a badge, with hooks/say.ts's lines
 python tools/render.py notebook.json assets/notebook.gif
-node tools/book-frames.ts > book.json           # /clawd book's pane, with hooks/book.ts's paper and page
+node tools/book-frames.ts > book.json           # the whole terminal with /clawd book docked, from hooks/book.ts
 python tools/render.py book.json assets/book.gif
 ```
 

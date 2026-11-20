@@ -25,7 +25,7 @@ COLORS = {
 DIM = (120, 120, 120)
 BORDER = (90, 90, 96)
 ORANGE = COLORS['#D77757']
-SUBST = {'∿': '~'}  # no installed font has U+223F
+SUBST = {'∿': '~', '⎿': '└'}  # no installed font has these
 
 data = json.load(open(sys.argv[1], encoding='utf-8'))
 cols = data['width']
@@ -34,8 +34,8 @@ CW = round(FONT.getlength('M'))
 CH = ascent + descent  # block elements span ascent+descent, so rows touch
 TOP = max(len(f.get('bubble', [])) for f in data['frames'])  # rows for Clawd's speech bubble, if any frame has one
 STAGE = len(data['frames'][0]['rows'])
-PANE = data.get('pane', False)  # a pane (tools/book-frames.ts): its rows are the whole picture
-ROWS = STAGE if PANE else TOP + STAGE + 1 + 1 + 1 + 3  # bubble, stage, gap, spinner, gap, prompt box
+SCREEN = data.get('screen', False)  # a whole terminal (tools/book-frames.ts): its rows are the picture
+ROWS = STAGE if SCREEN else TOP + STAGE + 1 + 1 + 1 + 3  # bubble, stage, gap, spinner, gap, prompt box
 W, H = PAD * 2 + CW * cols, PAD * 2 + CH * ROWS
 WHITE = COLORS['white']
 
@@ -92,7 +92,7 @@ def line(draw, col, row, text, color):
         cell(draw, col + i, row, ch, color)
 
 
-def pane(f):
+def screen(f):
     im = Image.new('RGB', (W, H), BG)
     d = ImageDraw.Draw(im)
     for r, runs in enumerate(f['rows']):
@@ -105,8 +105,8 @@ def pane(f):
 
 
 def frame(i, f):
-    if PANE:
-        return pane(f)
+    if SCREEN:
+        return screen(f)
     im = Image.new('RGB', (W, H), BG)
     d = ImageDraw.Draw(im)
     said = f.get('bubble', [])
