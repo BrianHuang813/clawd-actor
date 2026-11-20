@@ -15,8 +15,9 @@ the code. Read both.
   - `notes.ts` the notebook: commands, the markdown files, plan picks, clean, settings defaults
   - `say.ts` every line Clawd says about the notebook, English and Chinese
   - `badges.ts` the badges and their counts
+  - `book.ts` `/clawd book`'s ruled paper and the page laid out on it
 - New logic goes in a pure function in one of those, with a test; `register.tsx` only wires it up.
-- `tools/` are dev scripts (GIFs, `peek.ts`, `ci_tests.py`), not shipped behaviour.
+- `tools/` are dev scripts (GIFs, `book-frames.ts`, `peek.ts`, `ci_tests.py`), not shipped behaviour.
 
 ## Rules that are easy to break
 
